@@ -8,7 +8,7 @@ hermes skillrouter doctor
 hermes skillrouter rebuild [--root DIRECTORY] ...
 hermes skillrouter refresh-native
 hermes skillrouter clean --audit --dry-run [--root DIRECTORY] ...
-hermes skillrouter clean --audit --model aux --endpoint http://127.0.0.1:8011/v1/chat/completions --model-id MODEL
+hermes skillrouter clean --audit --model aux --endpoint http://127.0.0.1:8011/v1/chat/completions --model-id MODEL [--max-inferences 10] [--offset 0]
 hermes skillrouter review list
 hermes skillrouter review approve SKILL_NAME_OR_ID
 hermes skillrouter review reject SKILL_NAME_OR_ID
@@ -28,7 +28,7 @@ A valid local index must exist before routing is enabled. Restart existing Herme
 
 The HTTP client rejects remote destinations, hostnames, redirects and configured HTTP proxies; it has no provider fallback. A server on loopback may itself forward requests externally. Verify the serving model really is local and its external fallbacks are disabled. Best-effort masking of common credentials is not a comprehensive secret detector.
 
-All generated metadata is **pending** until `review approve`. A changed source invalidates a stale approval. No maintenance command overwrites a SKILL.md source.
+Local inference is **bounded to 10 requests per invocation by default** (configurable with `--max-inferences N`, 1–50). Running the command again skips pending/approved/rejected skills and continues with remaining candidates. Use `--offset N` when a `--force` audit needs explicit pagination, or to bypass repeatedly failing skills. `--dry-run` makes no inference calls and does not require a model endpoint.\n\nAll generated metadata is **pending** until `review approve`. A changed source invalidates a stale approval. No maintenance command overwrites a SKILL.md source.
 
 ## Doctor and slash command
 

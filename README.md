@@ -120,9 +120,9 @@ hermes skillrouter clean --audit --dry-run
 # Stage suggested retrieval metadata using your own local auxiliary model.
 hermes skillrouter clean --audit --model aux \
   --endpoint http://127.0.0.1:8011/v1/chat/completions \
-  --model-id YOUR_LOCAL_MODEL
+  --model-id YOUR_LOCAL_MODEL --max-inferences 10
 
-# Review and explicitly approve/reject one proposal.
+# Rerun clean to process the next unreviewed batch, without redoing pending proposals.\n\n# Review and explicitly approve/reject one proposal.
 hermes skillrouter review list
 hermes skillrouter review approve android-re
 ```

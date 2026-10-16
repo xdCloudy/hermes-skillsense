@@ -108,46 +108,65 @@ def _clean(args) -> str:
         raise ValueError("All supplied skill roots must be readable directories")
     # Verify destination BEFORE reading any skill source.
     with_model = getattr(args,"model", "none") == "aux"
-    if with_model:
+    dry_run = bool(getattr(args,"dry_run",False))
+    batch_size = getattr(args,"max_inferences",10)
+    offset = getattr(args,"offset",0)
+    if (type(batch_size) is not int or not 1 <= batch_size <= 50
+            or type(offset) is not int or offset < 0):
+        raise ValueError("--max-inferences must be 1–50 and --offset must be nonnegative")
+    # Dry-run must not require a model, its endpoint or an active server.
+    if with_model and not dry_run:
         endpoint(getattr(args,"endpoint","") or "")
         if not getattr(args,"model_id",None):
             raise ValueError("--model-id is required for strictly local auxiliary inference")
     skills = scan_skills(roots)
     if not skills:
         raise ValueError("No eligible skills found; no changes made")
-    if getattr(args,"dry_run",False):
+    if dry_run:
         empty = sum(not s.tags or not s.description for s in skills)
         return f"Dry run: {len(skills)} skills, {empty} with missing description or tags; no files or database changed."
     conn = open_db()
     counts = {"proposed":0,"skipped":0,"failed":0}
+    deferred = 0
     try:
         sync(conn,skills,roots=roots)
         by_id = {r["id"]:r for r in rows(conn)}
-        for s in skills:
-            existing = by_id[s.identity]
-            if not getattr(args,"force",False) and existing["status"] in ("pending","approved","rejected"):
+        eligible = []
+        for skill in skills:
+            existing = by_id[skill.identity]
+            if not getattr(args,"force",False) and existing["status"] in (
+                    "pending","approved","rejected"):
                 counts["skipped"] += 1
-                continue
-            if not with_model:
+            elif not with_model:
                 counts["skipped"] += 1
-                continue
+            else:
+                eligible.append(skill)
+        # A local model may be very slow: impose a hard, explicit request cap.
+        # Non-forced subsequent runs naturally skip already reviewed proposals.
+        selected = eligible[offset:offset + batch_size]
+        deferred = len(eligible) - len(selected)
+        for skill in selected:
             try:
-                raw = Path(s.path).read_text(encoding="utf-8")
+                raw = Path(skill.path).read_text(encoding="utf-8")
                 import hashlib
-                if hashlib.sha256(raw.encode("utf-8")).hexdigest() != s.sha256:
+                if hashlib.sha256(raw.encode("utf-8")).hexdigest() != skill.sha256:
                     counts["failed"] += 1
                     continue
                 proposal = enrich(raw[:12000],args.model_id,args.endpoint)
-                counts["proposed"] += int(stage(conn,s.identity,s.sha256,proposal))
+                counts["proposed"] += int(stage(conn,skill.identity,skill.sha256,proposal))
             except Exception:
                 counts["failed"] += 1
         publish_index(conn)
         save_native_snapshot(native_skill_allowlist())
     finally:
         conn.close()
+    notice = (f" Batched model calls: {len(selected)}/{batch_size}; "
+              f"{deferred} eligible outside this batch (offset {offset}). "
+              "Run again for the next batch; use --offset with --force to page.")
     return (f"Audit completed: {len(skills)} scanned, {counts['proposed']} pending review, "
-            f"{counts['skipped']} reused/skipped, {counts['failed']} failed. "
-            "Original SKILL.md files unchanged.")
+            f"{counts['skipped']} reused/skipped, {counts['failed']} failed."
+            + (notice if with_model else "") +
+            " Original SKILL.md files unchanged.")
 
 def _review(args) -> str:
     from .store import open_db, rows, decide, publish_index
@@ -249,6 +268,10 @@ def _setup(parser):
             cmd.add_argument("--model",choices=("none","aux"),default="none")
             cmd.add_argument("--endpoint",help="Explicit http://127.0.0.1:PORT/v1/chat/completions")
             cmd.add_argument("--model-id",help="Locally served model identifier")
+            cmd.add_argument("--max-inferences",type=int,default=10,
+                             help="Max local model calls per invocation (1–50, default 10)")
+            cmd.add_argument("--offset",type=int,default=0,
+                             help="Skip this many eligible skills for paginated/forced audits")
     review = sub.add_parser("review",help="List, approve or reject proposals")
     review.add_argument("review_action",nargs="?",choices=("list","approve","reject"),default="list")
     review.add_argument("skill",nargs="?",help="Exact skill id or unambiguous name")

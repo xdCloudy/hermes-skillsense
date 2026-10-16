@@ -94,3 +94,59 @@ class MetadataCleanTests(unittest.TestCase):
             force=False,endpoint=None,model_id=None))
         self.assertIn("no files or database changed",result)
         self.assertEqual(self.server.requests,[])
+
+    def test_model_batch_budget_and_resume(self):
+        from skillsense_test.store import open_db, rows
+        for index in range(4):
+            folder=self.root / f"other-{index}"
+            folder.mkdir()
+            (folder/"SKILL.md").write_text(
+                f"---\\nname: other-{index}\\ndescription: Inspect APK files\\n---\\n"
+                "# When to Use\\nInspect application binaries.\\n",encoding="utf-8")
+        url=f"http://127.0.0.1:{self.server.server_port}/v1/chat/completions"
+        settings=dict(roots=[str(self.root)],model="aux",dry_run=False,
+                      force=False,endpoint=url,model_id="local-only",
+                      max_inferences=2,offset=0)
+        first=self.plugin._clean(argparse.Namespace(**settings))
+        self.assertIn("2/2",first)
+        self.assertEqual(len(self.server.requests),2)
+        second=self.plugin._clean(argparse.Namespace(**settings))
+        self.assertEqual(len(self.server.requests),4)
+        self.assertIn("1 eligible outside this batch",second)
+        db=open_db()
+        try:
+            self.assertEqual(sum(r["status"]=="pending" for r in rows(db)),4)
+        finally:
+            db.close()
+        third=self.plugin._clean(argparse.Namespace(**settings))
+        self.assertEqual(len(self.server.requests),5)
+        self.assertIn("0 eligible outside this batch",third)
+        self.assertEqual(self.plugin._clean(argparse.Namespace(**settings)).count("Audit completed"),1)
+        self.assertEqual(len(self.server.requests),5)
+
+    def test_force_page_and_invalid_limits(self):
+        for index in range(3):
+            folder=self.root / f"page-{index}"
+            folder.mkdir()
+            (folder/"SKILL.md").write_text(
+                f"---\\nname: page-{index}\\ndescription: Page skill\\n---\\n",
+                encoding="utf-8")
+        url=f"http://127.0.0.1:{self.server.server_port}/v1/chat/completions"
+        settings=dict(roots=[str(self.root)],model="aux",dry_run=False,
+                      force=True,endpoint=url,model_id="local-only",
+                      max_inferences=1,offset=2)
+        self.plugin._clean(argparse.Namespace(**settings))
+        self.assertEqual(len(self.server.requests),1)
+        for limit,offset in ((0,0),(51,0),(1,-1),(True,0)):
+            settings["max_inferences"]=limit
+            settings["offset"]=offset
+            with self.assertRaisesRegex(ValueError,"max-inferences"):
+                self.plugin._clean(argparse.Namespace(**settings))
+        self.assertEqual(len(self.server.requests),1)
+
+    def test_dry_run_never_requires_local_model_server(self):
+        result=self.plugin._clean(argparse.Namespace(
+            roots=[str(self.root)],model="aux",dry_run=True,force=False,
+            endpoint=None,model_id=None))
+        self.assertIn("no files or database changed",result)
+        self.assertEqual(self.server.requests,[])
