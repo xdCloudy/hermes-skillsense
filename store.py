@@ -204,14 +204,48 @@ def read_native_snapshot(home: Path | None = None) -> dict[str,str]:
         return {}
 
 
+def _valid_index_skill(record: object) -> bool:
+    """Only publisher-shaped, bounded metadata may enter the live BM25 index.
+
+    Invalid generated enrichment must not poison routing for otherwise verified
+    native skills. Reject the entire sidecar index, then use native fallback.
+    """
+    if not isinstance(record, dict):
+        return False
+    text_fields = ("id", "name", "source_description", "description")
+    if any(not isinstance(record.get(field), str) for field in text_fields):
+        return False
+    if not 0 < len(record["id"]) <= 4096:
+        return False
+    if not _LOAD_NAME.fullmatch(record["name"]):
+        return False
+    if any(len(record[field]) > 1024 for field in ("source_description", "description")):
+        return False
+    for field in ("tags", "aliases", "intents", "negative_intents"):
+        values = record.get(field)
+        if (not isinstance(values, list) or len(values) > 128
+                or any(not isinstance(item, str) or len(item) > 1000 for item in values)):
+            return False
+    return True
+
+
 def read_index(home: Path | None = None) -> list[dict]:
     path = (Path(home) if home else data_dir()) / "index.json"
     try:
         if path.stat().st_size > 3_000_000:
             return []
         value = json.loads(path.read_text(encoding="utf-8"))
-        if value.get("schema") != SCHEMA or not isinstance(value.get("skills"),list):
+        if not isinstance(value, dict) or value.get("schema") != SCHEMA:
             return []
-        return value["skills"][:2500]
+        records = value.get("skills")
+        # Never accept a truncated catalogue: it could remove valid matches
+        # while leaving stale enrichment for unexamined records.
+        if (not isinstance(records, list) or len(records) > 2500
+                or not all(_valid_index_skill(record) for record in records)):
+            return []
+        identities = [record["id"] for record in records]
+        if len(identities) != len(set(identities)):
+            return []
+        return records
     except (FileNotFoundError,OSError,ValueError,TypeError,AttributeError):
         return []

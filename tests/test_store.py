@@ -107,3 +107,51 @@ class StoreTests(unittest.TestCase):
                 self.assertIsNone(row["pending"])
             finally:
                 conn.close()
+
+    def test_malformed_persisted_index_reverts_to_native_only(self):
+        from skillsense_test.store import read_index
+        from skillsense_test.eligibility import compose_native_records
+        from skillsense_test.routing import Router
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            index = home / "index.json"
+            native = {"android-re": "Inspect Android APK decompilation"}
+            valid = {
+                "id": "profile::android-re", "name": "android-re",
+                "source_description": native["android-re"],
+                "description": "Inspect Android APK decompilation",
+                "tags": ["apk"], "aliases": ["malicious-alias"],
+                "intents": [], "negative_intents": [],
+            }
+            for bad in (
+                dict(valid, aliases="not a list"),
+                dict(valid, description={"unexpected": "nested mapping"}),
+                dict(valid, id=123),
+                dict(valid, name="bad name with spaces"),
+                [valid],
+            ):
+                with self.subTest(bad=bad):
+                    index.write_text(json.dumps({"schema": 1, "skills": [bad]}),
+                                     encoding="utf-8")
+                    self.assertEqual(read_index(home), [])
+                    fallback = compose_native_records(read_index(home), native)
+                    self.assertEqual(fallback[0]["aliases"], [])
+                    self.assertIn("android-re", Router(fallback).suggest("android-re APK"))
+
+    def test_duplicate_and_oversized_indexes_abstain_instead_of_truncating(self):
+        from skillsense_test.store import read_index
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            index = home / "index.json"
+            row = {
+                "id": "one", "name": "skill", "source_description": "A",
+                "description": "A", "tags": [], "aliases": [],
+                "intents": [], "negative_intents": [],
+            }
+            index.write_text(json.dumps({"schema": 1, "skills": [row, row]}),
+                             encoding="utf-8")
+            self.assertEqual(read_index(home), [])
+            index.write_text(json.dumps({"schema": 1,
+                                         "skills": [dict(row, id=str(i)) for i in range(2501)]}),
+                             encoding="utf-8")
+            self.assertEqual(read_index(home), [])
