@@ -150,6 +150,55 @@ def publish_index(conn: sqlite3.Connection, home: Path | None = None) -> int:
             os.unlink(temporary)
     return len(payload)
 
+def save_native_snapshot(available: dict[str, str], home: Path | None = None) -> None:
+    """Persist a canonical Hermes catalogue from the local CLI rebuild.
+
+    The isolated plugin host does not need Hermes internal imports at all.
+    A failed/empty capture deliberately replaces the old snapshot.
+    """
+    root = Path(home) if home else data_dir()
+    root.mkdir(parents=True,exist_ok=True)
+    valid = {name:desc for name,desc in available.items()
+             if isinstance(name,str) and isinstance(desc,str)
+             and 0 < len(name) <= 200 and len(desc) <= 1024}
+    fd, tmp = tempfile.mkstemp(dir=root,prefix=".native-",suffix=".json")
+    try:
+        with os.fdopen(fd,"w",encoding="utf-8") as stream:
+            json.dump({"schema":SCHEMA,"captured_at":time.time(),"skills":valid},
+                      stream,ensure_ascii=False,separators=(",",":"))
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(tmp,root/"native-catalogue.json")
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+
+
+def read_native_snapshot(home: Path | None = None) -> dict[str,str]:
+    root = Path(home) if home else data_dir()
+    file = root / "native-catalogue.json"
+    try:
+        if file.stat().st_size > 2_000_000:
+            return {}
+        data = json.loads(file.read_text(encoding="utf-8"))
+        if not isinstance(data,dict) or data.get("schema") != SCHEMA:
+            return {}
+        if not isinstance(data.get("captured_at"),(int,float)):
+            return {}
+        now=time.time()
+        # Never trust snapshots from the future or older than seven days.
+        if not 0 <= now-data["captured_at"] <= 7*86400:
+            return {}
+        rows=data.get("skills")
+        if not isinstance(rows,dict):
+            return {}
+        return {name:desc for name,desc in rows.items()
+                if isinstance(name,str) and 0 < len(name) <= 200
+                and isinstance(desc,str) and len(desc) <= 1024}
+    except (OSError,ValueError,TypeError,AttributeError):
+        return {}
+
+
 def read_index(home: Path | None = None) -> list[dict]:
     path = (Path(home) if home else data_dir()) / "index.json"
     try:
