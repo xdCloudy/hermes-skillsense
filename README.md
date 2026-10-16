@@ -15,7 +15,7 @@ A lightweight, local-first skill router for [Hermes Agent](https://github.com/No
 </div>
 
 > [!IMPORTANT]
-> **Project status: experimental implementation (v0.2.1), not certified production-ready.** The BM25 router, read-only skill scanner, SQLite sidecar, review commands and strictly local metadata-audit transport are implemented. They are **opt-in**; normal skill hints are disabled until enabled through the CLI. An isolated real-Hermes installation has passed plugin doctor, validation, and CLI lifecycle smoke tests. **Native skill-eligibility parity and a held-out labelled selection-quality evaluation remain release blockers.**
+> **Project status: experimental implementation (v0.2.2), not certified production-ready.** The BM25 router, read-only skill scanner, SQLite sidecar, review commands and strictly local metadata-audit transport are implemented. They are **opt-in**; normal skill hints are disabled until enabled through the CLI. An isolated real-Hermes installation has passed plugin doctor, validation, and CLI lifecycle smoke tests. **Session-dependent skill-eligibility parity ([#7](https://github.com/xdCloudy/hermes-skillsense/issues/7)) and an independent held-out selection-quality evaluation ([#8](https://github.com/xdCloudy/hermes-skillsense/issues/8)) remain stable-release blockers.** Hermes' canonical `skills_list()` is checked on first router use, with safe native-only fallback entries for plugin skills and skills without a matching sidecar.
 
 ## Why SkillSense?
 
@@ -68,6 +68,18 @@ Neither skill bodies nor generated metadata should be written back to third-part
 | Fallback | Return no hint rather than interrupt the agent |
 | Dependencies | Python standard library wherever Hermes APIs permit |
 | User controls | CLI rebuild, audit, review, enable/disable, status; slash-command status only; Desktop action UI pending |
+
+## Offline retrieval evaluation
+
+```bash
+# Included synthetic 30-case smoke dataset.
+python tools/evaluate.py
+
+# Your own independently labelled, local Hermes tasks.
+python tools/evaluate.py --catalogue ./catalogue.json --cases ./cases.json --json
+```
+
+No prompts or skill files are uploaded. See [evaluation methodology](docs/EVALUATION.md). The bundled dataset is deliberately synthetic and **does not establish real-world accuracy**.
 
 ## Performance goals (not certified)
 
