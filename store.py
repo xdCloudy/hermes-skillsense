@@ -7,11 +7,15 @@ from pathlib import Path
 import json
 import hashlib
 import os
+import re
 import sqlite3
 import tempfile
 import time
 
 SCHEMA = 1
+# Mirror the canonical adapter's accepted Hermes load-name alphabet.
+# A persisted snapshot is still untrusted after a manual edit or corruption.
+_LOAD_NAME = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_./:-]{0,199}\Z")
 
 def data_dir() -> Path:
     try:
@@ -160,8 +164,8 @@ def save_native_snapshot(available: dict[str, str], home: Path | None = None) ->
     root = Path(home) if home else data_dir()
     root.mkdir(parents=True,exist_ok=True)
     valid = {name:desc for name,desc in available.items()
-             if isinstance(name,str) and isinstance(desc,str)
-             and 0 < len(name) <= 200 and len(desc) <= 1024}
+             if isinstance(name,str) and _LOAD_NAME.fullmatch(name)
+             and isinstance(desc,str) and len(desc) <= 1024}
     fd, tmp = tempfile.mkstemp(dir=root,prefix=".native-",suffix=".json")
     try:
         with os.fdopen(fd,"w",encoding="utf-8") as stream:
@@ -194,7 +198,7 @@ def read_native_snapshot(home: Path | None = None) -> dict[str,str]:
         if not isinstance(rows,dict):
             return {}
         return {name:desc for name,desc in rows.items()
-                if isinstance(name,str) and 0 < len(name) <= 200
+                if isinstance(name,str) and _LOAD_NAME.fullmatch(name)
                 and isinstance(desc,str) and len(desc) <= 1024}
     except (OSError,ValueError,TypeError,AttributeError):
         return {}

@@ -12,6 +12,7 @@ Private skills, Hermes user profile, auth tokens, local inference endpoint, side
 | Model-generated metadata | Untrusted | Validate type, length, evidence and review status |
 | User-configured loopback server | Could proxy externally despite local address | Restrict direct connection to numeric loopback; require operator verification of server behavior |
 | Local sidecar DB | Durable but corruptible | Transactions, migrations, last-known-good index |
+| Native availability snapshot | Durable but locally editable/corruptible | Validate canonical load-name syntax both when writing and reading; reject invalid names and abstain on empty/expired snapshots |
 | Gateway slash commands | Potentially external users | Authorisation and no unsafe long jobs |
 | Plugin host API | Trusted documented boundary | No monkey-patching; conservative availability |
 
