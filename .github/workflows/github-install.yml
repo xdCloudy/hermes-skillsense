@@ -1,5 +1,11 @@
 name: Install from GitHub
 on:
+  pull_request:
+    paths:
+      - "__init__.py"
+      - "*.py"
+      - "plugin.yaml"
+      - ".github/workflows/github-install.yml"
   push:
     branches: [main]
     paths:
@@ -34,7 +40,11 @@ jobs:
         run: |
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
-          hermes plugins install xdCloudy/hermes-skillsense --no-enable
+          ref_args=()
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            ref_args=(--ref "${{ github.event.pull_request.head.sha }}")
+          fi
+          hermes plugins install xdCloudy/hermes-skillsense --no-enable "${ref_args[@]}"
           hermes plugins enable skillsense
           hermes skillrouter doctor
           hermes skillrouter status
