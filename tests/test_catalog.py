@@ -131,7 +131,13 @@ class CatalogueTests(unittest.TestCase):
                 "requires:\n  bins: [docker]",
                 "environments:\n  - kanban",
                 "requires_apps:\n  - github",
-                "metadata:\n  hermes:\n    requires_toolsets: [kanban]"
+                "metadata:\n  hermes:\n    requires_toolsets: [kanban]",
+                "metadata:\n  hermes:\n    requires_tools: [web_search]",
+                "metadata:\n  hermes:\n    requires_tools:\n      - web_search",
+                "metadata:\n  hermes:\n    fallback_for_toolsets: [browser]",
+                "metadata:\n  hermes:\n    fallback_for_toolsets:\n      - browser",
+                "metadata:\n  hermes:\n    fallback_for_tools: [browser_navigate]",
+                "metadata:\n  hermes:\n    fallback_for_tools:\n      - browser_navigate"
             )):
                 item=root/f"restricted-{idx}"
                 item.mkdir()
