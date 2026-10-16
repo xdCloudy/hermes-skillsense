@@ -11,11 +11,11 @@
 | M4: Metadata Clean | Verified with stub | Audit, local-only inference, pending proposals, approval/rejection |
 | M5: Cross-platform | Passing | Python 3.11/3.12/3.13 on Windows, Linux and macOS |
 | M6: Evaluation infrastructure | Implemented | Synthetic smoke dataset, custom local labelled datasets, reproducible measurements |
-| M7: Stable release | **Blocked** | Real held-out selection quality, dynamic/session skill eligibility parity, direct install verification |
+| M7: Stable release | **Blocked** | Real held-out selection quality and dynamic/session skill eligibility parity |
 
 ## Release blockers
 
-1. [#7 Native session-level skill availability](https://github.com/xdCloudy/hermes-skillsense/issues/7): Hermes can vary skill visibility by project, environment, platform and session; the present router verifies a canonical snapshot at first use and requires restart for changes.
+1. [#7 Native session-level skill availability](https://github.com/xdCloudy/hermes-skillsense/issues/7): Hermes can vary skill visibility by project, environment, platform and session; the present router uses a profile-local canonical snapshot refreshed by explicit maintenance and rechecked periodically; it cannot prove every session's effective visibility.
 2. [#8 Independently labelled real-world benchmark](https://github.com/xdCloudy/hermes-skillsense/issues/8): authored synthetic fixtures demonstrate functionality but cannot prove production selection accuracy.
 
 ## Longer-term ideas

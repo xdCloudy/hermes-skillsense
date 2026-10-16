@@ -1,70 +1,46 @@
-# Hermes Integration Notes
+# Hermes integration
 
-**Status: experimental plugin implementation; host integration still unverified.** `plugin.yaml` and `__init__.py` register no-op `pre_llm_call`, terminal `skillrouter status|doctor` and slash `skillrouter`. Validate on installed Hermes before advertising installation support. Metadata Clean remains design only.
+**Status:** SkillSense v0.2.2 is an opt-in beta. GitHub Actions has verified the public GitHub install, plugin manifest validation, native CLI registration, and an isolated Hermes catalogue/routing lifecycle. This is **not a stable release certification**.
 
-## Primary source
+## Runtime integration
 
-[Official Hermes plugin development documentation](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins)
+- The plugin registers a `pre_llm_call` hook through Hermes' `PluginContext`. When routing is enabled, a sufficiently specific query may return `{"context": "..."}`, adding ephemeral user-turn context without modifying the stable system prompt or installed skill files.
+- A cached BM25 index is loaded from `index.json`. A separate `native-catalogue.json` snapshot records the Hermes-visible skill load names and descriptions. Both are in the plugin's profile-local storage.
+- Canonical names are captured during explicitly invoked maintenance commands using Hermes' existing `tools.skills_tool.skills_list()`; the ordinary-turn hook does **not** import that host-internal module.
+- The router only emits names supported by the native snapshot, omits duplicates or ambiguous matches, and uses native-only descriptions when sidecar attribution cannot be verified. An absent, malformed, empty or expired native snapshot produces no suggestions.
+- The native snapshot is valid for at most seven days. The in-memory router periodically rechecks it. Refresh after modifying installed skills, environment availability or profiles.
+- Native `skill_view` and skill loading remain fully owned by Hermes. SkillSense only suggests possible relevant load names.
 
-## Relevant native APIs
+## Maintenance APIs
 
-- General directory plugin: `plugin.yaml` plus a Python `register(ctx)` entry point.
-- `ctx.register_hook("pre_llm_call", callback)`: observers can return ephemeral `{"context": "..."}` or `None`; callback accepts `**kwargs`.
-- `ctx.register_cli_command(name=..., help=..., setup_fn=..., handler_fn=...)`: terminal subcommands.
-- `ctx.register_command("skillrouter", handler=..., description=...)`: in-session slash commands.
-- Manifest `config_schema`: native Desktop settings fields.
-- Host-owned per-profile `plugin_data_dir()` / `plugin_db()`: plugin durable storage.
-- Host-owned plugin LLM access for metadata generation; carefully check any privileged capabilities and provider routing.
+`hermes skillrouter rebuild` scans only selected trusted local roots, updates the SQLite sidecar and publishes a new index. `hermes skillrouter refresh-native` refreshes native and plugin skill availability without reading local SKILL.md sources. The latter also supports profiles with no local skill directory.
 
-These are integration targets, **not** a claim of an installable plugin in this repository. Do not copy an unverified `register_auxiliary_task` or `complete_structured` call signature from a draft spec without checking current authoritative docs and host validation.
+`hermes skillrouter clean --audit` is explicitly invoked and may use an operator-provided numeric HTTP loopback inference endpoint. It produces pending sidecar metadata; only manual `review approve` activates a proposal. A changed source hash invalidates its pending/approved enrichment. Source SKILL.md files are never rewritten.
 
-## Packaging sequence
+The hook has no per-turn model inference or network requests. The optional audit client's destination is constrained to loopback, with HTTP environment proxies disabled and redirects refused. This **does not prove** that a local model gateway itself does not relay requests to remote providers.
 
-1. Implement safe no-op `register(ctx)` with basic status commands. **Complete in scaffold.**
-2. Add accurate `plugin.yaml` declarations; do not declare hooks or tools that aren't registered.
-3. Validate via `hermes plugins doctor . --ci`.
-4. Validate catalog compatibility via `hermes plugins validate .`.
-5. Test isolated `HERMES_HOME`, multiple profiles, runtime failures and uninstall/reinstall.
-6. Only then document `hermes plugins install xdCloudy/hermes-skillsense` as a working command.
+## Hermes API compatibility and remaining blocker
 
-## Desktop UX limitation
+The `PluginContext` registration APIs and `pre_llm_call` ephemeral-context response have been validated in an actual Hermes test installation. However, `tools.skills_tool.skills_list()` is an internal module imported by maintenance commands, not a guaranteed stable plugin SDK interface.
 
-Manifest settings render standard fields; custom Scan/Clean/Review buttons require separately tested Desktop SDK support. Use CLI and slash commands for operations until that UI is implemented. Never assume arbitrary custom controls can be added by manifest alone.
+More importantly, the snapshot is profile-wide rather than fully session-specific. Project trust, working-directory changes, environment/toolset gates and disabled skills can alter what a particular session can load. Until Hermes offers a documented context-aware skill availability API, **issue #7 remains a release blocker**. The router intentionally abstains when it cannot verify eligibility.
 
-## Eligibility boundary
+**Issue #8** remains a separate release blocker: the included retrieval benchmark is synthetic and not independently labelled. The independent accuracy evaluator is documented in [EVALUATION.md](EVALUATION.md).
 
-A router hint must not claim a skill is available unless Hermes' own availability rules are verified. A fallback scanner may discover raw files but cannot on its own infer hidden host eligibility or trust decisions.
+## Testing
 
-## Local LLM boundary
+Use:
 
-Host auxiliary routing may include remote providers and automatic fallbacks; before sending skill text check the resolved **effective** route and fallback handling. If proof is unavailable, block host-based enrichment and optionally use a separate explicit loopback-only transport with proxy and redirect restrictions.
+```bash
+python -m unittest discover -s tests -v
+python tools/check_repo.py
+python tools/evaluate.py
+hermes plugins doctor . --ci
+hermes plugins validate .
+```
 
-## Tests
+GitHub Actions also verifies direct public installation, CLI maintenance and routing against a real Hermes instance, plus a multi-OS Python test matrix. See [DEVELOPMENT.md](DEVELOPMENT.md), [CLI.md](CLI.md) and [RELEASING.md](RELEASING.md).
 
-Hermes doctor with ephemeral home; callback context injection/no-op; invalid manifests; multiple plugins; profile changes; unavailable skill; transient model/network failures. Pin a tested minimum Hermes version only after integration tests pass.
-## Native skill eligibility gate (experimental)
+## Desktop and gateway
 
-At first router activation, SkillSense calls Hermes' `tools.skills_tool.skills_list()`, the same API Hermes uses for native listing. It explicitly rejects load names missing from the native list, duplicate names, and source-description mismatches. This covers Hermes' platform/environment/app/disabled gates and namespaced plugin listings without replicating their rules. If the listing fails, it injects **no hints**.
-
-**Trade-offs:** native eligibility is captured once per loaded router/session, so changes require a restart. Skills with no declared description cannot yet be safely matched to their filesystem source and are omitted from hints (but may still be audited). Individual project roots should be revalidated when changing working directory. This gate must not be mistaken for full session-specific availability parity.
-
-## Isolated plugin hosts and catalogue snapshots
-
-Hermes may run third-party plugins inside a separate plugin host. Calling
-`tools.skills_tool.skills_list()` directly from the per-turn hook is not a
-portable integration point. SkillSense therefore captures Hermes' canonical
-skill names and descriptions during the **CLI `skillrouter rebuild`**
-operation, where the Hermes tool module is available, and atomically writes a
-profile-scoped `native-catalogue.json`.
-
-The runtime uses only the cached `index.json` and `native-catalogue.json`,
-which requires no import from `tools.skills_tool`. The snapshot is valid for
-at most seven days; missing, corrupt, expired or empty snapshots cause
-**zero hints**, never a fallback to all files. Run `hermes skillrouter rebuild`
-after installing/updating skills, changing a profile or altering availability
-settings. Existing sessions may need to restart.
-
-This remains **session-context-limited**: a snapshot cannot fully represent
-dynamic project/environment availability. A documented context-aware Hermes
-SDK seam is needed to close [issue #7](https://github.com/xdCloudy/hermes-skillsense/issues/7)
-without adding expensive per-turn host calls.
+`config_schema` provides native Hermes settings for enablement, maximum hints and the local model target. Changes to enablement may require restarting existing Hermes sessions. The `/skillrouter` slash command is read-only so untrusted gateway senders cannot launch filesystem scans or model requests. Custom Desktop review controls remain unimplemented.

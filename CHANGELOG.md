@@ -4,6 +4,20 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+### Merged hardening since v0.2.2 candidate
+
+- Verified public GitHub installation and exact-PR installation checks (#15, #18).
+- Guarded against stale or shadowed skill names and approved negative-intent mismatches (#19).
+- Prevented incomplete and unreadable scans from corrupting or pruning sidecar data (#20, #24).
+- Captured native skill eligibility as a bounded local snapshot for isolated plugin hosts (#17), with periodic cache refresh and safe config handling (#21).
+- Added native-only/plugin-only availability refresh without requiring local SKILL.md files (#25).
+- Added best-effort masking of obvious credential strings before optional metadata inference (#26).
+- Streamlined pull-request CI while retaining the full scheduled/manual cross-platform matrix (#27).
+- Immediately republished the index when an attempted metadata approval invalidates stale enrichment (#28).
+- Added read-only operator diagnostics, actionable catalogue health reporting and safe enablement checks (#22).
+- Conservatively excluded conditional block-form YAML sources from sidecar enrichment (#29).
+
+
 ### v0.2.2 — candidate (not a stable release)
 
 - Native Hermes `skills_list()` availability gate, safe native-only fallback, and Markdown-description extraction (#9, #12).
@@ -11,7 +25,7 @@ All notable project changes will be documented here. Release entries will follow
 - Root-scoped metadata cleanup and source-hash verification before approving proposals, including Windows line-ending correctness (#11).
 - Full local HTTP stub audit → pending → manual approval integration suite, without modifying SKILL.md (#13).
 - Actual Hermes plugin doctor/CLI lifecycle smoke test, plus cross-platform Python 3.11–3.13 tests.
-- Direct remote GitHub installation workflow proposed for additional user-facing verification (#15).
+- Direct GitHub installation and CLI workflow verified through CI (#15, #18).
 - Remaining stable blockers: session-level availability parity (#7) and independently reviewed real-world retrieval quality (#8).
 
 

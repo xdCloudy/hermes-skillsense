@@ -1,4 +1,4 @@
-# SkillSense Configuration — experimental v0.2.1
+# SkillSense configuration — v0.2.2 beta
 
 ## Hermes Desktop
 
@@ -24,7 +24,13 @@ hermes skillrouter clean --audit --model aux
 hermes skillrouter review list
 ```
 
-The CLI `enable`/`disable` commands use the supported Hermes plugin settings API when invoked through the host; standalone tests use a profile-scoped marker fallback. Changing enablement requires restarting existing Hermes sessions.
+The CLI `enable`/`disable` commands use Hermes plugin settings when invoked through the host. Changing enablement generally requires restarting existing Hermes sessions. Explicit catalogue maintenance with `rebuild` or `refresh-native` should follow changes to installed/available skills.
+
+## Canonical skill availability
+
+`hermes skillrouter rebuild` stores trusted local skill metadata and refreshes the canonical native skill snapshot. `hermes skillrouter refresh-native` refreshes only Hermes-native/plugin-provided skill names and descriptions, including profiles without a user skill folder. Snapshot validity is bounded to seven days. A missing, empty or expired catalogue suppresses routing hints.
+
+A cache is not a session-scoped authorization decision: individual project directories and changes to tool/environment availability are still covered by [issue #7](https://github.com/xdCloudy/hermes-skillsense/issues/7).
 
 ## Local inference
 
