@@ -29,6 +29,29 @@ def _status(enabled_setting: bool = False) -> str:
     finally:
         conn.close()
 
+def _diagnostics() -> str:
+    """Read-only operator health check. Never runs a model or alters skills."""
+    from .store import data_dir, read_index, read_native_snapshot
+    from .eligibility import compose_native_records
+    root = data_dir()
+    index = root/"index.json"
+    snapshot = root/"native-catalogue.json"
+    if not index.is_file():
+        return ("SkillSense: index missing. Run 'hermes skillrouter rebuild' "
+                "before enabling routing.")
+    indexed = read_index()
+    if not snapshot.is_file():
+        return ("SkillSense: native skill catalogue missing. Run "
+                "'hermes skillrouter rebuild'; routing will abstain.")
+    allowed = read_native_snapshot()
+    if not allowed:
+        return ("SkillSense: native catalogue empty, corrupt or expired. Run "
+                "'hermes skillrouter rebuild'; routing will abstain.")
+    verified = compose_native_records(indexed, allowed)
+    return (f"SkillSense {__version__}: {len(indexed)} indexed, "
+            f"{len(allowed)} native-available, {len(verified)} eligible candidates. "
+            "No model is used for normal routing.")
+
 def _rebuild(args) -> str:
     from .catalog import scan_skills
     from .store import open_db, sync, publish_index, save_native_snapshot
@@ -167,6 +190,8 @@ def _configure(args, ctx=None) -> str:
     root = data_dir()
     root.mkdir(parents=True,exist_ok=True)
     flag = root/"enabled.flag"
+    if args.action == "enable" and not (root/"index.json").is_file():
+        raise ValueError("Run 'hermes skillrouter rebuild' before enabling routing")
     if ctx is not None and hasattr(ctx,"set_config"):
         ctx.set_config("enabled", args.action == "enable")
         flag.unlink(missing_ok=True)
@@ -184,7 +209,7 @@ def _cli(args, ctx=None):
     command = getattr(args,"skillsense_command",None)
     try:
         if command in (None,"status"):
-            enabled_setting = bool(ctx.get_config("enabled",default=False)) if ctx is not None else False
+            enabled_setting = (ctx.get_config("enabled",default=False) is True) if ctx is not None else False
             print(_status(enabled_setting))
         elif command == "rebuild":
             print(_rebuild(args))
@@ -201,9 +226,8 @@ def _cli(args, ctx=None):
             args.action=command
             print(_configure(args,ctx))
         elif command == "doctor":
-            from .store import data_dir
-            print(f"SkillSense {__version__}: data at {data_dir()}; native registration active.")
-            print("Verify host with: hermes plugins doctor . --ci; hermes plugins validate .")
+            print(_diagnostics())
+            print("Host validation: hermes plugins doctor . --ci")
         else:
             print("Use: hermes skillrouter status|rebuild|refresh-native|clean|review|enable|disable|doctor")
     except Exception as exc:
@@ -238,7 +262,7 @@ def _slash(args: str, ctx=None) -> str:
     # or model requests from here without a documented authenticated permission check.
     action = (args or "").strip().lower()
     if action in ("","status","help"):
-        return _status(bool(ctx.get_config("enabled",default=False)) if ctx is not None else False)
+        return _status((ctx.get_config("enabled",default=False) is True) if ctx is not None else False)
     return "For security, maintenance operations are CLI-only. Use: hermes skillrouter --help"
 
 def register(ctx):
