@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "description": "Synthetic retrieval catalogue. Not installed Hermes skills and no claims about real-world accuracy.",
+  "skills": [
+    {
+      "id": "apk",
+      "name": "android-re",
+      "description": "Inspect Android APK files, decompile DEX bytecode using JADX and reverse engineer mobile applications",
+      "tags": [
+        "android",
+        "apk",
+        "jadx",
+        "dex"
+      ],
+      "aliases": [
+        "decompile apk",
+        "examine Android bytecode"
+      ],
+      "intents": [
+        "Analyse an installed Android application"
+      ]
+    },
+    {
+      "id": "web",
+      "name": "web-design",
+      "description": "Build responsive websites, CSS styling, landing pages and accessible HTML interfaces",
+      "tags": [
+        "css",
+        "html",
+        "ui",
+        "website"
+      ],
+      "aliases": [
+        "style website",
+        "frontend layout"
+      ],
+      "intents": [
+        "Create a responsive landing page"
+      ]
+    },
+    {
+      "id": "security",
+      "name": "security-audit",
+      "description": "Review application vulnerabilities, security weaknesses and harden web services",
+      "tags": [
+        "security",
+        "vulnerability",
+        "audit"
+      ],
+      "aliases": [
+        "check for vulnerabilities"
+      ],
+      "intents": [
+        "Audit application security"
+      ]
+    },
+    {
+      "id": "resume",
+      "name": "resume-writing",
+      "description": "Write and improve CVs, job applications, cover letters and resumes",
+      "tags": [
+        "resume",
+        "cv",
+        "job"
+      ],
+      "aliases": [
+        "polish my CV"
+      ],
+      "intents": [
+        "Improve my work history summary"
+      ]
+    },
+    {
+      "id": "sql",
+      "name": "sql-query",
+      "description": "Write SQL queries and optimize relational database searches",
+      "tags": [
+        "sql",
+        "database",
+        "query"
+      ],
+      "aliases": [
+        "database query tuning"
+      ],
+      "intents": [
+        "Optimize relational query performance"
+      ]
+    },
+    {
+      "id": "weather",
+      "name": "weather-forecast",
+      "description": "Interpret weather forecasts and local precipitation reports",
+      "tags": [
+        "weather",
+        "forecast",
+        "rain"
+      ],
+      "aliases": [
+        "chance of rain"
+      ],
+      "intents": [
+        "Read a local forecast"
+      ]
+    },
+    {
+      "id": "pdf",
+      "name": "pdf-processing",
+      "description": "Extract text, split pages and read tables from PDF documents",
+      "tags": [
+        "pdf",
+        "document",
+        "extract"
+      ],
+      "aliases": [
+        "parse PDF"
+      ],
+      "intents": [
+        "Extract tables from PDF"
+      ]
+    },
+    {
+      "id": "git",
+      "name": "git-workflow",
+      "description": "Manage Git branches, commits, pull requests and repository history",
+      "tags": [
+        "git",
+        "github",
+        "commit"
+      ],
+      "aliases": [
+        "prepare a pull request"
+      ],
+      "intents": [
+        "Submit a code change"
+      ]
+    },
+    {
+      "id": "network",
+      "name": "network-troubleshooting",
+      "description": "Diagnose network latency, packet loss, routing and DNS failures",
+      "tags": [
+        "network",
+        "dns",
+        "latency",
+        "routing"
+      ],
+      "aliases": [
+        "fix dropped packets"
+      ],
+      "intents": [
+        "Debug a local network connection"
+      ]
+    },
+    {
+      "id": "python",
+      "name": "python-testing",
+      "description": "Write Python unit tests and debug Python applications with unittest and pytest",
+      "tags": [
+        "python",
+        "pytest",
+        "unittest"
+      ],
+      "aliases": [
+        "add regression tests"
+      ],
+      "intents": [
+        "Test Python code"
+      ]
+    }
+  ]
+}

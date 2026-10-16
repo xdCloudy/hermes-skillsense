@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "source": "Author-generated synthetic smoke tests, not independently labelled real usage",
+  "cases": [
+    {
+      "id": "apk-keyword",
+      "prompt": "decompile my Android APK with JADX",
+      "gold": [
+        "android-re"
+      ]
+    },
+    {
+      "id": "apk-dex",
+      "prompt": "inspect APK DEX code",
+      "gold": [
+        "android-re"
+      ]
+    },
+    {
+      "id": "apk-synonym",
+      "prompt": "examine Android bytecode",
+      "gold": [
+        "android-re"
+      ]
+    },
+    {
+      "id": "web-css",
+      "prompt": "style my website using CSS",
+      "gold": [
+        "web-design"
+      ]
+    },
+    {
+      "id": "web-landing",
+      "prompt": "create responsive HTML for a landing page",
+      "gold": [
+        "web-design"
+      ]
+    },
+    {
+      "id": "security-scan",
+      "prompt": "audit vulnerabilities in my application security",
+      "gold": [
+        "security-audit"
+      ]
+    },
+    {
+      "id": "security-synonym",
+      "prompt": "check for vulnerabilities in a web service",
+      "gold": [
+        "security-audit"
+      ]
+    },
+    {
+      "id": "resume-cv",
+      "prompt": "improve my CV and job application",
+      "gold": [
+        "resume-writing"
+      ]
+    },
+    {
+      "id": "resume-synonym",
+      "prompt": "polish my CV",
+      "gold": [
+        "resume-writing"
+      ]
+    },
+    {
+      "id": "sql-query",
+      "prompt": "optimize a SQL query",
+      "gold": [
+        "sql-query"
+      ]
+    },
+    {
+      "id": "sql-synonym",
+      "prompt": "database query tuning",
+      "gold": [
+        "sql-query"
+      ]
+    },
+    {
+      "id": "weather-rain",
+      "prompt": "what does the rain forecast indicate",
+      "gold": [
+        "weather-forecast"
+      ]
+    },
+    {
+      "id": "weather-alias",
+      "prompt": "check chance of rain",
+      "gold": [
+        "weather-forecast"
+      ]
+    },
+    {
+      "id": "pdf-table",
+      "prompt": "extract a table from a PDF document",
+      "gold": [
+        "pdf-processing"
+      ]
+    },
+    {
+      "id": "pdf-pages",
+      "prompt": "split the pages of a PDF",
+      "gold": [
+        "pdf-processing"
+      ]
+    },
+    {
+      "id": "git-commit",
+      "prompt": "create a git commit on a branch",
+      "gold": [
+        "git-workflow"
+      ]
+    },
+    {
+      "id": "git-review",
+      "prompt": "prepare a pull request on GitHub",
+      "gold": [
+        "git-workflow"
+      ]
+    },
+    {
+      "id": "network-dns",
+      "prompt": "debug a DNS network connection",
+      "gold": [
+        "network-troubleshooting"
+      ]
+    },
+    {
+      "id": "network-packets",
+      "prompt": "fix dropped packets on my network",
+      "gold": [
+        "network-troubleshooting"
+      ]
+    },
+    {
+      "id": "python-tests",
+      "prompt": "write Python unit tests for this code",
+      "gold": [
+        "python-testing"
+      ]
+    },
+    {
+      "id": "python-regression",
+      "prompt": "add regression tests in pytest",
+      "gold": [
+        "python-testing"
+      ]
+    },
+    {
+      "id": "no-greeting",
+      "prompt": "hello, how are you",
+      "gold": []
+    },
+    {
+      "id": "no-math",
+      "prompt": "what is two plus two",
+      "gold": []
+    },
+    {
+      "id": "no-philosophy",
+      "prompt": "what does intelligence mean",
+      "gold": []
+    },
+    {
+      "id": "no-favourite",
+      "prompt": "which colour do you like most",
+      "gold": []
+    },
+    {
+      "id": "no-news",
+      "prompt": "what happened in politics this morning",
+      "gold": []
+    },
+    {
+      "id": "no-chitchat",
+      "prompt": "tell me something interesting about oceans",
+      "gold": []
+    },
+    {
+      "id": "ambiguous-files",
+      "prompt": "can you help me with my files",
+      "gold": []
+    },
+    {
+      "id": "ambiguous-build",
+      "prompt": "I need to work on a project",
+      "gold": []
+    },
+    {
+      "id": "ambiguous-review",
+      "prompt": "I need a review of something",
+      "gold": []
+    }
+  ]
+}
