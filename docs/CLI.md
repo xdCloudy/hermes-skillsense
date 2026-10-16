@@ -27,7 +27,7 @@ Each scan defaults to the user's Hermes \`skills\` directory and can take one or
 
 \`--dry-run\` reports missing tags/descriptions but performs **no writes or model calls**. A normal \`clean --audit\` refreshes source hashes and preserves approved metadata, but cannot generate new tags without \`--model aux\`.
 
-\`--model aux\` requires explicit \`--endpoint\` on \`127.0.0.1\` or \`[::1]\` and \`--model-id\`. No cloud, proxy, hostname, URL redirect, or provider fallback is permitted. Suggestions go into the SQLite sidecar as **pending**, never directly into SKILL.md.
+\`--model aux\` requires explicit \`--endpoint\` on \`127.0.0.1\` or \`[::1]\` and \`--model-id\`. The HTTP client rejects remote hosts, DNS names, redirects and proxy settings, and has no provider fallback. A server running on loopback can still forward requests externally; to remain genuinely offline, operators must verify that the local inference service has no remote backends. Suggestions go into the SQLite sidecar as **pending**, never directly into SKILL.md.
 
 \`review approve\` activates pending metadata and regenerates the index. \`review reject\` discards it. Existing approved metadata is invalidated when its skill source changes.
 
