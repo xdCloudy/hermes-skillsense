@@ -72,7 +72,7 @@ class ExportCatalogueTests(unittest.TestCase):
             save_native_snapshot({"android-re":"Inspect APK code"},data)
             (data/"index.json").write_text(json.dumps({
                 "schema":1, "skills":[{
-                    "id":"profile::android-re","name":"android-re",
+                    "id":str(root/"private-profile") + "::android-re","name":"android-re",
                     "source_description":"Inspect APK code",
                     "description":"Inspect and decompile APK code",
                     "tags":["apk","jadx"],"aliases":["decompile apk"],
@@ -86,3 +86,5 @@ class ExportCatalogueTests(unittest.TestCase):
             exported=json.loads(output.read_text(encoding="utf-8"))["skills"][0]
             self.assertEqual(exported["aliases"],["decompile apk"])
             self.assertEqual(exported["negative_intents"],["create an android apk"])
+            self.assertEqual(exported["id"], "export::00001")
+            self.assertNotIn(str(root), output.read_text(encoding="utf-8"))

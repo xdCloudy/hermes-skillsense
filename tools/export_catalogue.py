@@ -30,10 +30,11 @@ def export(data_dir: Path, output: Path) -> int:
     indexed = read_index(data_dir)
     records = compose_native_records(indexed, available)
 
-    # Export exactly the fields the offline BM25 evaluator consumes.
+    # Exporter-only opaque IDs avoid exposing absolute profile/skill paths.
+    # The evaluator uses name-based labels, not native internal identities.
     skills = [
         {
-            "id": record["id"],
+            "id": f"export::{position:05d}",
             "name": record["name"],
             "description": record.get("description", ""),
             "tags": record.get("tags", []),
@@ -41,7 +42,9 @@ def export(data_dir: Path, output: Path) -> int:
             "intents": record.get("intents", []),
             "negative_intents": record.get("negative_intents", []),
         }
-        for record in sorted(records, key=lambda x: (x["name"], x["id"]))
+        for position, record in enumerate(
+            sorted(records, key=lambda x: (x["name"], x["id"])), start=1
+        )
     ]
     payload = {"schema_version": 1, "skills": skills}
     output.parent.mkdir(parents=True, exist_ok=True)

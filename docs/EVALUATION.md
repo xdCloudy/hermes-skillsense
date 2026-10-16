@@ -73,8 +73,9 @@ The exporter refuses missing or expired native snapshots, and refuses to
 overwrite an existing output. It uses the same conservative native/sidecar
 matching code as routing, with no model, browser or network calls.
 
-**Privacy:** The resulting file can contain private skill names, descriptions
-and approved aliases. Nothing is uploaded automatically. Inspect the JSON
+**Privacy:** The exporter replaces internal skill IDs (which may include absolute
+profile paths) with opaque, export-local identifiers. The resulting file can
+still contain private skill names, descriptions and approved aliases. Nothing is uploaded automatically. Inspect the JSON
 before sharing it with reviewers or committing it to a public repository.
 No prompt histories or user tasks are included.
 
