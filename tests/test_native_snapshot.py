@@ -65,3 +65,18 @@ class NativeSnapshotTests(unittest.TestCase):
             mod.clear_cache()
             self.assertIsNone(mod.hint("android-re APK"))
         mod.clear_cache()
+
+    def test_router_refreshes_when_native_catalogue_expires(self):
+        import skillsense_test.routing as mod
+        from unittest.mock import patch
+        sidecar=[{"id":"local","name":"android-re",
+                  "description":"Inspect APKs", "source_description":"Inspect APKs",
+                  "tags":["apk"],"aliases":[],"intents":[]}]
+        with patch.object(mod,"read_index",return_value=sidecar), \
+             patch.object(mod,"read_native_snapshot",
+                          side_effect=[{"android-re":"Inspect APKs"},{}]):
+            mod.clear_cache()
+            self.assertIsNotNone(mod.hint("android-re APK"))
+            mod._cache_refreshed -= mod._CACHE_REFRESH_SECONDS + 1
+            self.assertIsNone(mod.hint("android-re APK"))
+        mod.clear_cache()
