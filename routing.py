@@ -73,6 +73,8 @@ class Router:
         seen = {primary["name"]}
         if count > 1 and len(candidates) > 1:
             for c in candidates[1:]:
+                if len(selected) >= count:
+                    break
                 if c.score < top.score * 0.8:
                     break
                 r = self.records[c.skill_id]
@@ -84,7 +86,6 @@ class Router:
                                 for negative in r.get("negative_intents") or [])):
                     selected.append(c)
                     seen.add(r["name"])
-                    break
         names = []
         for c in selected[:count]:
             r = self.records[c.skill_id]

@@ -166,3 +166,30 @@ class EvaluationCLITests(unittest.TestCase):
                                      text=True, capture_output=True, timeout=20)
                 self.assertNotEqual(run.returncode, 0)
                 self.assertIn(expected_error, run.stderr)
+
+    def test_micro_recall_at_three_uses_three_candidate_slots(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            cat, cases = root / "catalogue.json", root / "cases.json"
+            skills = [
+                {"id": name, "name": name, "description": "Process workflow tasks",
+                 "tags": ["process", "workflow"], "aliases": [], "intents": []}
+                for name in ("alpha-tool", "beta-tool", "gamma-tool")
+            ]
+            cat.write_text(json.dumps({"schema_version": 1, "skills": skills}),
+                           encoding="utf-8")
+            cases.write_text(json.dumps({
+                "schema_version": 1, "source": "synthetic three-label regression",
+                "cases": [{"id": "three", "prompt":
+                           "alpha-tool beta-tool gamma-tool process workflow",
+                           "gold": ["alpha-tool", "beta-tool", "gamma-tool"]}]
+            }), encoding="utf-8")
+            run = subprocess.run([
+                sys.executable, str(ROOT / "tools" / "evaluate.py"),
+                "--json", "--catalogue", str(cat), "--cases", str(cases)
+            ], capture_output=True, text=True, timeout=20)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            enriched = json.loads(run.stdout)["results"][2]
+            self.assertEqual(enriched["micro_recall_at_3"], 1.0)
+            self.assertEqual(enriched["counts"]["emitted_hints"], 3)
+            self.assertEqual(enriched["counts"]["retrieved_relevant_labels"], 3)

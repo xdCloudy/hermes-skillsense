@@ -21,7 +21,7 @@ Data: `benchmarks/selection-catalogue-v1.json` and `benchmarks/selection-cases-v
 
 - **Positive top-1 hit rate:** proportion of cases with at least one relevant skill whose first suggestion is relevant.
 - **Positive top-3 task hit rate:** proportion of positive tasks where at least one of the top three suggestions is relevant (legacy output key `recall_at_3_on_positive`).
-- **Micro Recall@3:** relevant skill labels retrieved among the three suggestions, divided by all relevant skill labels across tasks. Unlike the hit rate, this accounts for multi-skill ground truth.
+- **Micro Recall@3:** relevant skill labels retrieved among up to **three** suggestions, divided by all relevant skill labels across tasks. Unlike the hit rate, this accounts for multi-skill ground truth. The offline evaluator explicitly requests `max_suggestions=3`; regular live turns default to **two**. Eligibility, evidence, ambiguity and score gates may still return fewer than three.
 - **Precision of emitted hints:** relevant emitted skill hints divided by all emitted hints (up to three per task).
 - **No-skill false-positive rate:** proportion of irrelevant/ambiguous tasks where *any* skill was suggested. New JSON metrics use `null` for missing denominators; zero observations do not imply a zero error rate.
 - **Wilson 95% intervals:** descriptive binomial uncertainty intervals for top-1 positive-task hit rate and no-skill false-positive rate. Small samples produce wide bounds; they do not correct biased task selection or incorrect labels.
