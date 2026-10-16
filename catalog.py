@@ -85,7 +85,7 @@ def scan_skills(roots: list[Path]) -> list[Skill]:
                 continue
             total += 1
             if total > MAX_SKILLS:
-                return sorted(found.values(), key=lambda s: (s.name, s.identity))
+                raise ValueError("Skill scan exceeded maximum; existing index must be preserved")
             path = Path(directory) / "SKILL.md"
             try:
                 if path.is_symlink() or not path.resolve().is_relative_to(root):
