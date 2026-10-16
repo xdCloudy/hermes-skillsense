@@ -84,3 +84,26 @@ class StoreTests(unittest.TestCase):
                 self.assertIsNone(r["pending"])
             finally:
                 conn.close()
+
+    def test_reject_pending_stale_source_clears_previous_approval(self):
+        from skillsense_test.catalog import Skill
+        from skillsense_test.store import open_db, sync, rows, stage, decide
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);file=root/"SKILL.md";file.write_text("original",encoding="utf-8")
+            digest=hashlib.sha256(file.read_bytes()).hexdigest()
+            record=Skill("A","a","Original capability",(),(),str(file),digest)
+            conn=open_db(root/"db")
+            try:
+                sync(conn,[record],roots=[root])
+                self.assertTrue(stage(conn,"A",digest,{"description":"First revision"}))
+                self.assertTrue(decide(conn,"A",True))
+                self.assertEqual(rows(conn)[0]["approved"]["description"],"First revision")
+                self.assertTrue(stage(conn,"A",digest,{"description":"Second revision"}))
+                file.write_text("changed after proposal",encoding="utf-8")
+                self.assertFalse(decide(conn,"A",False))
+                row=rows(conn)[0]
+                self.assertEqual(row["status"],"stale")
+                self.assertIsNone(row["approved"])
+                self.assertIsNone(row["pending"])
+            finally:
+                conn.close()

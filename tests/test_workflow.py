@@ -109,6 +109,36 @@ class WorkflowTests(unittest.TestCase):
         finally:
             conn.close()
 
+
+    def test_stale_rejection_revokes_prior_alias_in_published_index(self):
+        from skillsense_test.store import open_db, rows, stage, read_index
+        self.plugin._rebuild(argparse.Namespace(roots=None))
+        conn=open_db()
+        try:
+            row=rows(conn)[0]
+            self.assertTrue(stage(conn,row["id"],row["source_hash"],
+                                  {"description":"Inspect Android APK decompilation",
+                                   "aliases":["previous alias"]}))
+        finally:
+            conn.close()
+        self.assertIn("Approved",self.plugin._review(
+            argparse.Namespace(review_action="approve",skill="android-re")))
+        self.assertEqual(read_index()[0]["aliases"],["previous alias"])
+        conn=open_db()
+        try:
+            row=rows(conn)[0]
+            self.assertTrue(stage(conn,row["id"],row["source_hash"],
+                                  {"description":"Replacement review proposal"}))
+        finally:
+            conn.close()
+        source=self.skills/"SKILL.md"
+        source.write_text(source.read_text(encoding="utf-8")+"\nEdited since proposal.\n",
+                          encoding="utf-8")
+        result=self.plugin._review(
+            argparse.Namespace(review_action="reject",skill="android-re"))
+        self.assertIn("stale",result)
+        self.assertEqual(read_index()[0]["aliases"],[])
+
     def test_malicious_remote_url_fails_before_scan(self):
         from skillsense_test.local_model import LocalOnlyError
         with self.assertRaises(LocalOnlyError):
