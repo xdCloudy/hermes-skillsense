@@ -1,6 +1,6 @@
 # Hermes Integration Notes
 
-**Status: native skeleton implemented, integration unverified.** `plugin.yaml` and `__init__.py` register no-op `pre_llm_call`, terminal `skillrouter status|doctor` and slash `skillrouter`. Validate on installed Hermes before advertising installation support. Metadata Clean remains design only.
+**Status: experimental plugin implementation; host integration still unverified.** `plugin.yaml` and `__init__.py` register no-op `pre_llm_call`, terminal `skillrouter status|doctor` and slash `skillrouter`. Validate on installed Hermes before advertising installation support. Metadata Clean remains design only.
 
 ## Primary source
 

@@ -1,61 +1,209 @@
-"""SkillSense Hermes native plugin entry point (pre-alpha).
+"""Hermes SkillSense plugin: audited local skill routing and CLI.
 
-The pre-LLM hook intentionally returns None until safe skill discovery,
-native eligibility checks and acceptance tests are implemented.
-This version never reads skills, calls a model, or injects prompt content.
+No model is used by pre_llm_call. Metadata generation is explicit and is only
+sent to a numeric loopback endpoint, with no redirects or proxy fallback.
 """
+from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
+def _root(args):
+    from pathlib import Path
+    import os
+    return [Path(p).expanduser() for p in (getattr(args,"roots",None) or
+        [str(Path(os.environ.get("HERMES_HOME",str(Path.home()/".hermes"))) / "skills")])]
 
-def _pre_llm_call(**kwargs):
-    """Observer hook: leave Hermes inference and discovery unchanged."""
-    return None
+def _status() -> str:
+    from .store import open_db, rows, data_dir
+    dbfile = data_dir() / "data.db"
+    if not dbfile.is_file():
+        return "SkillSense: no catalogue yet. Run 'hermes skillrouter rebuild'."
+    conn = open_db()
+    try:
+        items = rows(conn)
+        flags = {}
+        for row in items:
+            flags[row["status"]] = flags.get(row["status"],0)+1
+        enabled = (data_dir()/"enabled.flag").exists()
+        return f"SkillSense {__version__}: {len(items)} skills, {flags}, routing {'enabled' if enabled else 'disabled'}."
+    finally:
+        conn.close()
 
+def _rebuild(args) -> str:
+    from .catalog import scan_skills
+    from .store import open_db, sync, publish_index
+    from .routing import clear_cache
+    roots = _root(args)
+    for root in roots:
+        if root.is_symlink() or not root.is_dir():
+            raise ValueError(f"Skill root missing, not a directory, or symlink: {root}")
+    skills = scan_skills(roots)
+    if not skills:
+        raise ValueError("No eligible skills found; existing index preserved")
+    conn = open_db()
+    try:
+        result = sync(conn, skills)
+        publish_index(conn)
+    finally:
+        conn.close()
+    clear_cache()
+    return f"Rebuilt index: {result['total']} skills ({result['added']} new; {result['changed']} changed)."
 
-def _cli_handler(args):
-    subcommand = getattr(args, "skillsense_command", None)
-    if subcommand in (None, "status"):
-        print("SkillSense 0.1.0 (pre-alpha): plugin scaffold active.")
-        print("Skill injection: disabled. Metadata Clean: not implemented.")
-    elif subcommand == "doctor":
-        print("SkillSense registration loaded. Run: hermes plugins doctor . --ci")
+def _clean(args) -> str:
+    from pathlib import Path
+    from .catalog import scan_skills
+    from .store import open_db, sync, rows, stage, publish_index
+    from .local_model import enrich, endpoint
+    roots = _root(args)
+    if any(root.is_symlink() or not root.is_dir() for root in roots):
+        raise ValueError("All supplied skill roots must exist and not be symlinks")
+    # Verify destination BEFORE reading any skill source.
+    with_model = getattr(args,"model", "none") == "aux"
+    if with_model:
+        endpoint(getattr(args,"endpoint","") or "")
+        if not getattr(args,"model_id",None):
+            raise ValueError("--model-id is required for strictly local auxiliary inference")
+    skills = scan_skills(roots)
+    if not skills:
+        raise ValueError("No eligible skills found; no changes made")
+    if getattr(args,"dry_run",False):
+        empty = sum(not s.tags or not s.description for s in skills)
+        return f"Dry run: {len(skills)} skills, {empty} with missing description or tags; no files or database changed."
+    conn = open_db()
+    counts = {"proposed":0,"skipped":0,"failed":0}
+    try:
+        sync(conn,skills)
+        by_id = {r["id"]:r for r in rows(conn)}
+        for s in skills:
+            existing = by_id[s.identity]
+            if not getattr(args,"force",False) and existing["status"] in ("pending","approved","rejected"):
+                counts["skipped"] += 1
+                continue
+            if not with_model:
+                counts["skipped"] += 1
+                continue
+            try:
+                raw = Path(s.path).read_text(encoding="utf-8")
+                import hashlib
+                if hashlib.sha256(raw.encode("utf-8")).hexdigest() != s.sha256:
+                    counts["failed"] += 1
+                    continue
+                proposal = enrich(raw[:12000],args.model_id,args.endpoint)
+                counts["proposed"] += int(stage(conn,s.identity,s.sha256,proposal))
+            except (OSError,ValueError,KeyError,TypeError,TimeoutError) as exc:
+                counts["failed"] += 1
+        publish_index(conn)
+    finally:
+        conn.close()
+    return (f"Audit completed: {len(skills)} scanned, {counts['proposed']} pending review, "
+            f"{counts['skipped']} reused/skipped, {counts['failed']} failed. "
+            "Original SKILL.md files unchanged.")
+
+def _review(args) -> str:
+    from .store import open_db, rows, decide, publish_index
+    from .routing import clear_cache
+    conn = open_db()
+    try:
+        action = getattr(args,"review_action","list")
+        all_rows = rows(conn)
+        if action == "list":
+            relevant = [(r["id"],r["name"],r["pending"]) for r in all_rows if r["pending"]]
+            if not relevant:
+                return "No pending metadata proposals."
+            return "\n".join(f"{name} | {identifier} | {str(proposal)[:220]}"
+                             for identifier,name,proposal in relevant[:80])
+        target = getattr(args,"skill",None)
+        matches = [r for r in all_rows if r["id"] == target or r["name"] == target]
+        if len(matches) != 1:
+            raise ValueError(f"Expected one matching skill; found {len(matches)}")
+        ok = decide(conn,matches[0]["id"],action=="approve")
+        if not ok:
+            return "No pending proposal for that skill."
+        publish_index(conn)
+        clear_cache()
+        return f"{action.capitalize()}d proposal for {matches[0]['name']}."
+    finally:
+        conn.close()
+
+def _configure(args) -> str:
+    from .store import data_dir
+    from .routing import clear_cache
+    root = data_dir()
+    root.mkdir(parents=True,exist_ok=True)
+    flag = root/"enabled.flag"
+    if args.action == "enable":
+        if not (root/"index.json").exists():
+            raise ValueError("Run 'hermes skillrouter rebuild' before enabling routing")
+        flag.write_text("1\n",encoding="utf-8")
     else:
-        print("Unknown command. Use: hermes skillrouter status|doctor")
+        flag.unlink(missing_ok=True)
+    clear_cache()
+    return f"Routing {args.action}d. Restart Hermes to apply to existing sessions."
 
+def _cli(args):
+    command = getattr(args,"skillsense_command",None)
+    try:
+        if command in (None,"status"):
+            print(_status())
+        elif command == "rebuild":
+            print(_rebuild(args))
+        elif command == "clean":
+            print(_clean(args))
+        elif command == "review":
+            print(_review(args))
+        elif command in ("enable","disable"):
+            args.action=command
+            print(_configure(args))
+        elif command == "doctor":
+            from .store import data_dir
+            print(f"SkillSense {__version__}: data at {data_dir()}; native registration active.")
+            print("Verify host with: hermes plugins doctor . --ci; hermes plugins validate .")
+        else:
+            print("Use: hermes skillrouter status|rebuild|clean|review|enable|disable|doctor")
+    except Exception as exc:
+        # Local operator CLI may display an actionable error; avoid skill body output.
+        print(f"SkillSense error: {type(exc).__name__}: {exc}")
+        raise SystemExit(2) from None
 
-def _setup_cli(parser):
+def _setup(parser):
     sub = parser.add_subparsers(dest="skillsense_command")
-    sub.add_parser("status", help="Show current SkillSense scaffold status")
-    sub.add_parser("doctor", help="Show native plugin diagnostics guidance")
-    parser.set_defaults(func=_cli_handler)
+    sub.add_parser("status",help="Show approved/pending skill state")
+    for name in ("rebuild","clean"):
+        cmd = sub.add_parser(name,help="Read-only scan of trusted skill roots")
+        cmd.add_argument("--root",dest="roots",action="append",help="Trusted skills directory")
+        if name=="clean":
+            cmd.add_argument("--audit",action="store_true",help="Audit existing and missing metadata")
+            cmd.add_argument("--dry-run",action="store_true",help="No database writes or LLM calls")
+            cmd.add_argument("--force",action="store_true",help="Regenerate previously reviewed metadata")
+            cmd.add_argument("--model",choices=("none","aux"),default="none")
+            cmd.add_argument("--endpoint",help="Explicit http://127.0.0.1:PORT/v1/chat/completions")
+            cmd.add_argument("--model-id",help="Locally served model identifier")
+    review = sub.add_parser("review",help="List, approve or reject proposals")
+    review.add_argument("review_action",nargs="?",choices=("list","approve","reject"),default="list")
+    review.add_argument("skill",nargs="?",help="Exact skill id or unambiguous name")
+    sub.add_parser("enable",help="Enable runtime hints after restart")
+    sub.add_parser("disable",help="Disable runtime hints after restart")
+    sub.add_parser("doctor",help="Show local integration diagnostics")
+    parser.set_defaults(func=_cli)
 
-
-def _slash_command(raw_args: str) -> str:
-    action = (raw_args or "").strip().lower()
-    if action in ("", "status", "help"):
-        return (
-            "SkillSense 0.1.0 (pre-alpha). Skill routing and Metadata Clean "
-            "are not implemented. No context is injected. "
-            "Try: /skillrouter status"
-        )
-    if action == "doctor":
-        return "Run 'hermes plugins doctor . --ci' from the SkillSense directory."
-    return "Unknown action. Available: status, doctor, help."
-
+def _slash(args: str) -> str:
+    # Slash commands can arrive from third-party gateways. Never run filesystem scans
+    # or model requests from here without a documented authenticated permission check.
+    action = (args or "").strip().lower()
+    if action in ("","status","help"):
+        return _status()
+    return "For security, maintenance operations are CLI-only. Use: hermes skillrouter --help"
 
 def register(ctx):
-    """Register supported native Hermes surfaces without side effects."""
-    ctx.register_hook("pre_llm_call", _pre_llm_call)
-    ctx.register_cli_command(
-        name="skillrouter",
-        help="SkillSense (pre-alpha): status and diagnostics",
-        setup_fn=_setup_cli,
-        handler_fn=_cli_handler,
-    )
-    ctx.register_command(
-        "skillrouter",
-        handler=_slash_command,
-        description="SkillSense (pre-alpha) status",
-        args_hint="[status|doctor]",
-    )
+    from .routing import hint
+    from .store import data_dir
+    active = (data_dir()/"enabled.flag").exists()
+    def on_turn(user_message="",**kwargs):
+        return hint(user_message) if active else None
+    ctx.register_hook("pre_llm_call",on_turn)
+    ctx.register_cli_command(name="skillrouter",help="SkillSense local skill router",
+                             setup_fn=_setup,handler_fn=_cli)
+    ctx.register_command("skillrouter",handler=_slash,description="SkillSense status",
+                         args_hint="[status]")
+    ctx.register_auxiliary_task("skillrouter-tagger",display_name="SkillSense Metadata Tagger",
+                                description="User-triggered local skill metadata enrichment")

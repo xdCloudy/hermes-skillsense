@@ -1,35 +1,40 @@
-# Command-Line and Slash Interface
+# CLI reference — experimental v0.2.0
 
-## Available in scaffold v0.1.0
+All commands are registered through Hermes' native CLI plugin API.
 
-```text
+## Commands
+
+\`\`\`text
 hermes skillrouter status
 hermes skillrouter doctor
-/skillrouter status
-/skillrouter doctor
-```
+hermes skillrouter rebuild [--root DIRECTORY] ...
+hermes skillrouter clean --audit --dry-run [--root DIRECTORY] ...
+hermes skillrouter clean --audit --model aux --endpoint http://127.0.0.1:8011/v1/chat/completions --model-id MODEL
+hermes skillrouter review list
+hermes skillrouter review approve SKILL_NAME_OR_ID
+hermes skillrouter review reject SKILL_NAME_OR_ID
+hermes skillrouter enable
+hermes skillrouter disable
+\`\`\`
 
-These provide honest scaffold status and diagnostics. They do not perform skill scanning, selection or metadata cleaning.
+Each scan defaults to the user's Hermes \`skills\` directory and can take one or more explicit trusted roots. A rebuild is required before enabling live hints. After enabling/disabling restart existing Hermes sessions.
 
-## Planned, not implemented
+## Slash commands
 
-```text
-hermes skillrouter clean --audit [--dry-run] [--force] [--model aux]
-hermes skillrouter review [--skill ID]
-hermes skillrouter show SKILL
-hermes skillrouter rebuild
-hermes skillrouter benchmark --dataset PATH
-hermes skillrouter export --format json
-```
+\`/skillrouter status\` is read-only. All mutating maintenance must run locally via CLI. This prevents unauthorised gateway senders from launching skill scans or LLM jobs.
 
-Slash commands should offer `/skillrouter clean|review|show` only once they can safely execute with gateway authentication and without blocking conversations. Prefer a CLI command for any long-running maintenance process.
+## Metadata Clean
 
-## Exit codes (future contract)
+\`--dry-run\` reports missing tags/descriptions but performs **no writes or model calls**. A normal \`clean --audit\` refreshes source hashes and preserves approved metadata, but cannot generate new tags without \`--model aux\`.
 
-- `0`: success, including a clean abstention.
-- `2`: bad arguments/configuration.
-- `3`: local model route unsafe/unavailable.
-- `4`: validation failure or partial audit.
-- `5`: durable storage or migration failure.
+\`--model aux\` requires explicit \`--endpoint\` on \`127.0.0.1\` or \`[::1]\` and \`--model-id\`. No cloud, proxy, hostname, URL redirect, or provider fallback is permitted. Suggestions go into the SQLite sidecar as **pending**, never directly into SKILL.md.
 
-Exact handling will be implemented and tested before being considered stable.
+\`review approve\` activates pending metadata and regenerates the index. \`review reject\` discards it. Existing approved metadata is invalidated when its skill source changes.
+
+## Known limitations
+
+- Hermes auxiliary task is registered, but model resolution is currently explicit on the CLI to avoid host-level cloud fallback.
+- No Desktop audit/review buttons.
+- No automatic project-skill discovery: only user-approved roots.
+- Eligibility decisions are conservative but are not proven identical to Hermes' full native skill registry.
+- Rebuild/index changes require restarting existing Hermes sessions for fresh state.

@@ -4,6 +4,19 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+### Implemented for experimental v0.2.0
+- Read-only bounded skill scanner with missing frontmatter handling and platform restriction abstention.
+- Transactional SQLite sidecar with source-hash invalidation, pending metadata proposals, approval and rejection.
+- Immutable JSON BM25 index and opt-in per-turn hints with conservative abstention.
+- Local-only, explicit numeric loopback OpenAI-compatible metadata inference; remote URLs, proxy use and redirects rejected.
+- CLI rebuild, dry-run audit, model audit, review, enable/disable and status commands; gateway slash operations are status-only.
+- Additional security, storage, routing and catalogue tests; synthetic benchmark harness.
+
+### Outstanding production gates
+- Native Hermes end-to-end smoke test; real skill availability parity; labelled relevance benchmarks.
+
+
+
 ### Added
 - Native Hermes plugin scaffold (`plugin.yaml`, `register(ctx)`) with a no-op `pre_llm_call` and diagnostic CLI/slash commands.
 - Dependency-free, pure Python BM25 search core and cross-platform unit tests.

@@ -15,7 +15,7 @@ A lightweight, local-first skill router for [Hermes Agent](https://github.com/No
 </div>
 
 > [!IMPORTANT]
-> **Project status: pre-alpha scaffold (v0.1.0).** A native Hermes plugin entry point, diagnostic commands, a standalone BM25 core and unit tests are now present. **Live routing, skill scanning and Metadata Clean are not implemented.** The registered pre-LLM hook is intentionally a no-op. Plugin API compatibility must still be validated on a real Hermes installation.
+> **Project status: experimental implementation (v0.2.0), not certified production-ready.** The BM25 router, read-only skill scanner, SQLite sidecar, review commands and strictly local metadata-audit transport are implemented. They are **opt-in**; normal skill hints are disabled until enabled through the CLI. End-to-end testing against a real Hermes installation, skill-eligibility parity and a labelled evaluation set remain release blockers.
 
 ## Why SkillSense?
 
@@ -54,22 +54,22 @@ Installed SKILL.md files
 
 Neither skill bodies nor generated metadata should be written back to third-party `SKILL.md` files.
 
-## Architecture and planned capabilities
+## Implemented architecture and known limitations
 
 | Area | Design |
 | --- | --- |
-| Routing | In-process BM25, name and alias boosts, conservative selection |
+| Routing | In-process BM25 with name/alias matching, conservative abstention; explicitly enabled only |
 | Runtime inference | **None** — no inference calls during ordinary turns |
 | Privacy | Local-only by default; fail closed if auxiliary inference would leave the machine |
-| Metadata Clean | Explicit `audit` mode for missing, poor, stale and conflicting metadata |
-| AI enrichment | Existing Hermes **auxiliary model**, used only during cleanup |
+| Metadata Clean | Opt-in audit, pending proposals, manual approval, stale-source invalidation |
+| AI enrichment | Registered Hermes auxiliary task; currently calls explicit, numeric loopback OpenAI-compatible endpoint to **guarantee no cloud fallback** |
 | Storage | Profile-scoped SQLite sidecar; skill source files unchanged |
 | Compatibility | Native Hermes plugin interfaces; Windows, Linux, macOS |
 | Fallback | Return no hint rather than interrupt the agent |
 | Dependencies | Python standard library wherever Hermes APIs permit |
-| User controls | CLI, slash commands, native Desktop settings; dedicated Desktop UI later |
+| User controls | CLI rebuild, audit, review, enable/disable, status; slash-command status only; Desktop action UI pending |
 
-## Performance goals
+## Performance goals (not certified)
 
 These are **targets, not achieved benchmark results**:
 
@@ -79,26 +79,57 @@ These are **targets, not achieved benchmark results**:
 - Default context addition of **0–60 tokens** and at most three skill suggestions.
 - No skill instructions loaded until Hermes actually requests them.
 
-## Available scaffold commands
+## Getting started (experimental)
+
+Install into an **isolated Hermes profile** until host compatibility and skill-eligibility parity are validated:
 
 ```bash
+hermes plugins install xdCloudy/hermes-skillsense --no-enable
+hermes plugins enable skillsense
+hermes plugins doctor skillsense --ci
+
+# Build an index from the user's installed skills.
+hermes skillrouter rebuild
+
+# Inspect current status; enable only after reviewing the index.
 hermes skillrouter status
-hermes skillrouter doctor
+hermes skillrouter enable
+# Restart Hermes to activate hints.
 ```
 
-Available in-session commands: `/skillrouter status` and `/skillrouter doctor`.
+Disable at any time with `hermes skillrouter disable` and restart Hermes. All original SKILL.md files remain unchanged.
 
-**Planned, not yet available:** `clean --audit`, `review`, `rebuild`, and `benchmark`. Metadata Clean defaults will be **audit + auxiliary model + sidecar storage**. No cleanup runs in the scaffold.
+### Metadata Clean
 
-## Develop and validate the scaffold
+```bash
+# Read-only report; no model calls and no writes.
+hermes skillrouter clean --audit --dry-run
+
+# Stage suggested retrieval metadata using your own local auxiliary model.
+hermes skillrouter clean --audit --model aux \
+  --endpoint http://127.0.0.1:8011/v1/chat/completions \
+  --model-id YOUR_LOCAL_MODEL
+
+# Review and explicitly approve/reject one proposal.
+hermes skillrouter review list
+hermes skillrouter review approve android-re
+```
+
+The CLI requires a **numeric loopback address**, not a hostname or cloud provider, and bypasses proxies and redirects. The Hermes auxiliary task is registered for future native integration, but the host's auxiliary completion API may use remote fallback, so this release intentionally uses the explicit loopback transport instead. There are no bundled model weights, background services, or per-turn inference.
+
+The default scan covers `$HERMES_HOME/skills` (or `~/.hermes/skills`). Extra trusted skill roots can be selected using `--root PATH`; the plugin does not automatically index untrusted project skills. Unsupported platform/requirement declarations are excluded conservatively.
+
+## Validate locally
 
 ```bash
 python -m unittest discover -s tests -v
 python tools/check_repo.py
-hermes plugins doctor . --ci  # requires a local Hermes installation
+python tools/benchmark.py
+hermes plugins doctor . --ci
+hermes plugins validate .
 ```
 
-See [development setup](docs/DEVELOPMENT.md). The plain Python tests do not substitute for a successful Hermes integration test.
+**Production gates:** real Hermes installation smoke tests, matching native skill eligibility/trust decisions, Windows/macOS/Linux CI, and independent labelled retrieval accuracy. Until those pass, treat routing as experimental.
 
 ## Documentation
 

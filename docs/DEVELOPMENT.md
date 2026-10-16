@@ -1,6 +1,6 @@
 # Development Setup
 
-This repository provides an **initial native Hermes plugin scaffold**, a dependency-free BM25 implementation, and tests. End-to-end skill routing and Metadata Clean do **not** exist yet.
+This repository provides an **experimental native Hermes plugin**, a dependency-free BM25 implementation, and tests. Skill routing, metadata audit and review exist behind explicit opt-in, but production end-to-end Hermes compatibility is **not yet verified**.
 
 ## Prerequisites
 
@@ -33,7 +33,7 @@ hermes plugins validate .
 
 Plugin doctor exercises discovery and registration with a temporary `HERMES_HOME`. Neither command is run by the GitHub CI matrix because CI does not install Hermes itself. Record the exact Hermes version when testing.
 
-The native entry point currently registers `pre_llm_call` as a **no-op**, plus `hermes skillrouter status|doctor` and `/skillrouter` status. It does **not** inject hints or change native skill loading.
+The native hook emits no hints by default. An operator must rebuild the index and run `hermes skillrouter enable`, then restart Hermes. Only exact or evidence-supported BM25 candidates are suggested; Hermes remains responsible for skill loading.
 
 ## Design references
 

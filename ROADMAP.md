@@ -5,12 +5,12 @@ SkillSense is **pre-alpha / planning**. These are intended milestones, not deliv
 | Milestone | Scope | Gate |
 | --- | --- | --- |
 | M0: Bootstrap (complete) | Brand, docs, issue templates, licence, agent guidance, first testable scaffold | Repository structure verified |
-| M1: Plugin skeleton (in progress) | Native manifest, registration, no-op hook, CLI/slash status added | Still needs Hermes doctor/validator and install/uninstall verification |
-| M2: Lexical retrieval | Safe skill discovery, parser, BM25, availability filters, abstention | Reproducible retrieval tests; normal Hermes still works |
-| M3: Sidecar storage | SQLite schema, versioning, atomic indexes, profile isolation | Integrity and migration tests |
-| M4: Deterministic audit | Metadata quality checks, hashing, dry-run, reports | No model necessary |
-| M5: Local auxiliary audit | Strict local-only routing, schema generation, source evidence checks | Remote exfiltration tests fail closed |
-| M6: Review & UX | Field-level approval, CLI/slash, Desktop settings | Accessible, reversible review; no source edits |
+| M1: Plugin skeleton (requires Hermes host verification) | Native manifest, registration, no-op hook, CLI/slash status added | Still needs Hermes doctor/validator and install/uninstall verification |
+| M2: Lexical retrieval (experimental) | Safe skill discovery, parser, BM25, availability filters, abstention | Reproducible retrieval tests; normal Hermes still works |
+| M3: Sidecar storage (implemented; needs integration testing) | SQLite schema, versioning, atomic indexes, profile isolation | Integrity and migration tests |
+| M4: Deterministic audit (basic) | Metadata quality checks, hashing, dry-run, reports | No model necessary |
+| M5: Local audit transport (implemented) | Strict local-only routing, schema generation, source evidence checks | Remote exfiltration tests fail closed |
+| M6: Review CLI (implemented; Desktop pending) | Field-level approval, CLI/slash, Desktop settings | Accessible, reversible review; no source edits |
 | M7: Benchmark & release | Performance + recall metrics, Windows/macOS/Linux CI, packaging | Published reproducible data; native plugin validation |
 
 ## Release policy

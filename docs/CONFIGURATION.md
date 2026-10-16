@@ -1,36 +1,25 @@
-# Configuration Reference
+# Configuration — experimental v0.2.0
 
-**Version:** scaffold `0.1.0`. Feature toggles mentioned in [SPEC.md](../SPEC.md) are design targets until the implementation exists.
+SkillSense does not read an undocumented Hermes settings object. Local state is controlled by the native CLI.
 
-## Manifest settings
+## Defaults
 
-Native Hermes Desktop can render `plugin.yaml` `config_schema` fields under plugin settings.
-
-| Setting | Default | Current behaviour |
-| --- | --- | --- |
-| `enabled` | `false` | Reserved; live hint injection is not implemented |
-| `max_suggestions` | `3` | Reserved; no hints are emitted at present |
-
-Setting `enabled: true` in the current scaffold does **not** activate routing. This is intentional.
-
-## Future Metadata Clean settings (not shipped)
-
-| Setting | Intended default |
+| Option | Default |
 | --- | --- |
-| `clean_scope` | `audit` |
-| `model_mode` | `aux` |
-| `storage_mode` | `sidecar` |
-| `strict_local` | `true` |
-| `auto_approve` | `false` |
-| `max_suggestions` | `3` |
-| `max_hint_tokens` | `60` |
+| Routing | Disabled until \`hermes skillrouter enable\` |
+| Max hints | Two, maximum three internally |
+| Index location | Hermes profile data directory / \`plugin-data/skillsense/index.json\` |
+| Sidecar | SQLite \`data.db\`, transactional |
+| Source scan | Active Hermes profile \`skills\` directory |
+| Metadata audit | Manual |
+| Inference | None unless \`--model aux\` is specified |
+| Model endpoint | Explicit numeric loopback URL; no remote fallback |
+| SKILL.md modifications | Never |
 
-The auxiliary model's **effective** endpoint must be verified as loopback and any cloud fallback disabled before skill contents are transmitted. A provider name that looks local is insufficient.
+Plugin data survives updates/removal and is profile-scoped through the host storage API when available.
 
-## Storage
+The auxiliary task \`skillrouter-tagger\` is registered in Hermes. The current secure audit path uses an explicit loopback endpoint and model ID instead of \`ctx.llm\`, because the host API can use cloud fallbacks not controllable by the plugin.
 
-Once the sidecar is implemented, use Hermes' profile-scoped plugin data directory via `plugin_data_dir("skillsense")` and `plugin_db("skillsense")`. The current scaffold does not create a database or write any data.
+## Desktop
 
-## Unsupported / intentionally absent
-
-No bundled external model, credentials, API keys, cloud service, automatic downloads or per-turn embedding daemon.
+Native Desktop settings can show plugin manifest information. Dedicated buttons for scanning and review are not implemented; use CLI. Do not assume toggles in Desktop affect routing unless their wiring is tested.
