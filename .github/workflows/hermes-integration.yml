@@ -94,4 +94,5 @@ jobs:
           PY
 
           hermes skillrouter refresh-native | grep -q "Refreshed native availability"
+          hermes skillrouter doctor | grep -q "eligible candidates"
           echo "SkillSense Hermes CLI smoke test passed."
