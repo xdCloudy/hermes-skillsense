@@ -73,12 +73,16 @@ def scan_skills(roots: list[Path]) -> list[Skill]:
     """Only scans explicitly trusted roots; never follows symlinks."""
     found: dict[str, Skill] = {}
     total = 0
+    def abort_incomplete_scan(error: OSError) -> None:
+        # os.walk otherwise ignores unreadable subdirectories and an index
+        # rebuild might delete cached rows for skills that were never visited.
+        raise OSError("Skill directory scan incomplete; index unchanged") from error
     for raw_root in roots:
         root = Path(raw_root).expanduser()
         if not root.is_dir():
             continue
         root = root.resolve()
-        for directory, dirs, files in os.walk(root, followlinks=False):
+        for directory, dirs, files in os.walk(root, followlinks=False, onerror=abort_incomplete_scan):
             dirs[:] = sorted(d for d in dirs if not d.startswith((".", "_"))
                              and not (Path(directory) / d).is_symlink())
             if "SKILL.md" not in files:
@@ -91,10 +95,12 @@ def scan_skills(roots: list[Path]) -> list[Skill]:
                 if path.is_symlink() or not path.resolve().is_relative_to(root):
                     continue
                 if path.stat().st_size > MAX_SKILL_BYTES:
-                    continue
+                    raise ValueError("Skill file exceeds scan size limit; index unchanged")
                 body = path.read_text(encoding="utf-8")
-            except (OSError, UnicodeError, ValueError):
-                continue
+            except (OSError, UnicodeError) as exc:
+                # Hard abort rather than treating temporarily unreadable skill
+                # sources as removed and pruning their approved metadata.
+                raise ValueError("Unreadable skill source; index unchanged") from exc
             metadata, instructions = frontmatter(body)
             name = str(metadata.get("name") or path.parent.name).lower()
             if not _NAME.fullmatch(name):
