@@ -6,7 +6,7 @@ Read this file **before editing code or documentation** in SkillSense.
 
 Implement [GOAL.md](GOAL.md) and [SPEC.md](SPEC.md) without violating [SECURITY.md](SECURITY.md). If an instruction conflicts, priority is: user instruction → security and safety invariants → current upstream Hermes documented API → repository specifications → convenience.
 
-**Status:** v0.2.0 experimental implementation. Routing, scanning, SQLite sidecar, local-only enrichment and review CLI exist. Not production-certified; do not claim host integration or model accuracy has been validated.
+**Status:** v0.2.1 experimental implementation. Routing, scanning, SQLite sidecar, local-only enrichment and review CLI exist. Not production-certified; do not claim host integration or model accuracy has been validated.
 
 ## Non-negotiable rules
 

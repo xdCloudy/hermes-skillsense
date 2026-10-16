@@ -5,7 +5,7 @@ sent to a numeric loopback endpoint, with no redirects or proxy fallback.
 """
 from __future__ import annotations
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 def _root(args):
     from pathlib import Path
@@ -13,7 +13,7 @@ def _root(args):
     return [Path(p).expanduser() for p in (getattr(args,"roots",None) or
         [str(Path(os.environ.get("HERMES_HOME",str(Path.home()/".hermes"))) / "skills")])]
 
-def _status() -> str:
+def _status(enabled_setting: bool = False) -> str:
     from .store import open_db, rows, data_dir
     dbfile = data_dir() / "data.db"
     if not dbfile.is_file():
@@ -24,7 +24,7 @@ def _status() -> str:
         flags = {}
         for row in items:
             flags[row["status"]] = flags.get(row["status"],0)+1
-        enabled = (data_dir()/"enabled.flag").exists()
+        enabled = (data_dir()/"enabled.flag").exists() or enabled_setting
         return f"SkillSense {__version__}: {len(items)} skills, {flags}, routing {'enabled' if enabled else 'disabled'}."
     finally:
         conn.close()
@@ -125,12 +125,16 @@ def _review(args) -> str:
     finally:
         conn.close()
 
-def _configure(args) -> str:
+def _configure(args, ctx=None) -> str:
     from .store import data_dir
     from .routing import clear_cache
     root = data_dir()
     root.mkdir(parents=True,exist_ok=True)
     flag = root/"enabled.flag"
+    if ctx is not None and hasattr(ctx,"set_config"):
+        ctx.set_config("enabled", args.action == "enable")
+        flag.unlink(missing_ok=True)
+        return f"Routing {args.action}d in Hermes settings. Restart Hermes to apply."
     if args.action == "enable":
         if not (root/"index.json").exists():
             raise ValueError("Run 'hermes skillrouter rebuild' before enabling routing")
@@ -140,20 +144,24 @@ def _configure(args) -> str:
     clear_cache()
     return f"Routing {args.action}d. Restart Hermes to apply to existing sessions."
 
-def _cli(args):
+def _cli(args, ctx=None):
     command = getattr(args,"skillsense_command",None)
     try:
         if command in (None,"status"):
-            print(_status())
+            enabled_setting = bool(ctx.get_config("enabled",default=False)) if ctx is not None else False
+            print(_status(enabled_setting))
         elif command == "rebuild":
             print(_rebuild(args))
         elif command == "clean":
+            if ctx is not None:
+                args.endpoint = getattr(args,"endpoint",None) or ctx.get_config("local_endpoint",default="")
+                args.model_id = getattr(args,"model_id",None) or ctx.get_config("local_model_id",default="")
             print(_clean(args))
         elif command == "review":
             print(_review(args))
         elif command in ("enable","disable"):
             args.action=command
-            print(_configure(args))
+            print(_configure(args,ctx))
         elif command == "doctor":
             from .store import data_dir
             print(f"SkillSense {__version__}: data at {data_dir()}; native registration active.")
@@ -186,24 +194,25 @@ def _setup(parser):
     sub.add_parser("doctor",help="Show local integration diagnostics")
     parser.set_defaults(func=_cli)
 
-def _slash(args: str) -> str:
+def _slash(args: str, ctx=None) -> str:
     # Slash commands can arrive from third-party gateways. Never run filesystem scans
     # or model requests from here without a documented authenticated permission check.
     action = (args or "").strip().lower()
     if action in ("","status","help"):
-        return _status()
+        return _status(bool(ctx.get_config("enabled",default=False)) if ctx is not None else False)
     return "For security, maintenance operations are CLI-only. Use: hermes skillrouter --help"
 
 def register(ctx):
     from .routing import hint
     from .store import data_dir
-    active = (data_dir()/"enabled.flag").exists()
+    active = (data_dir()/"enabled.flag").exists() or bool(ctx.get_config("enabled",default=False))
+    max_suggestions = max(1,min(3,int(ctx.get_config("max_suggestions",default=2))))
     def on_turn(user_message="",session_id="",**kwargs):
-        return hint(user_message,session_id=session_id) if active else None
+        return hint(user_message,max_suggestions=max_suggestions,session_id=session_id) if active else None
     ctx.register_hook("pre_llm_call",on_turn)
     ctx.register_cli_command(name="skillrouter",help="SkillSense local skill router",
-                             setup_fn=_setup,handler_fn=_cli)
-    ctx.register_command("skillrouter",handler=_slash,description="SkillSense status",
+                             setup_fn=_setup,handler_fn=lambda args: _cli(args,ctx))
+    ctx.register_command("skillrouter",handler=lambda raw: _slash(raw,ctx),description="SkillSense status",
                          args_hint="[status]")
-    ctx.register_auxiliary_task("skillrouter-tagger",display_name="SkillSense Metadata Tagger",
+    ctx.register_auxiliary_task("skillrouter_tagger",display_name="SkillSense Metadata Tagger",
                                 description="User-triggered local skill metadata enrichment")

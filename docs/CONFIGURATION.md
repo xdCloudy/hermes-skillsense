@@ -1,25 +1,41 @@
-# Configuration — experimental v0.2.0
+# SkillSense Configuration — experimental v0.2.1
 
-SkillSense does not read an undocumented Hermes settings object. Local state is controlled by the native CLI.
+## Hermes Desktop
 
-## Defaults
+The standard native Hermes plugin settings surface is supported via `ctx.get_config()` / `ctx.set_config()`. In **Settings → Plugins → SkillSense**, use:
 
-| Option | Default |
-| --- | --- |
-| Routing | Disabled until \`hermes skillrouter enable\` |
-| Max hints | Two, maximum three internally |
-| Index location | Hermes profile data directory / \`plugin-data/skillsense/index.json\` |
-| Sidecar | SQLite \`data.db\`, transactional |
-| Source scan | Active Hermes profile \`skills\` directory |
-| Metadata audit | Manual |
-| Inference | None unless \`--model aux\` is specified |
-| Model endpoint | Explicit numeric loopback URL; no remote fallback |
-| SKILL.md modifications | Never |
+| Setting | Default | Behaviour |
+| --- | --- | --- |
+| `enabled` | `false` | Opt-in skill hints after restarting Hermes |
+| `max_suggestions` | `2` | Integer clamped to 1–3 |
+| `local_endpoint` | Empty | Optional numeric loopback URL for metadata cleanup |
+| `local_model_id` | Empty | Local model ID for manually triggered audit |
 
-Plugin data survives updates/removal and is profile-scoped through the host storage API when available.
+Desktop settings do not execute a cleanup. To scan, review or approve metadata, use the CLI.
 
-The auxiliary task \`skillrouter-tagger\` is registered in Hermes. The current secure audit path uses an explicit loopback endpoint and model ID instead of \`ctx.llm\`, because the host API can use cloud fallbacks not controllable by the plugin.
+## CLI
 
-## Desktop
+```bash
+hermes skillrouter rebuild
+hermes skillrouter status
+hermes skillrouter enable
+hermes skillrouter clean --audit --dry-run
+hermes skillrouter clean --audit --model aux
+hermes skillrouter review list
+```
 
-Native Desktop settings can show plugin manifest information. Dedicated buttons for scanning and review are not implemented; use CLI. Do not assume toggles in Desktop affect routing unless their wiring is tested.
+The CLI `enable`/`disable` commands use the supported Hermes plugin settings API when invoked through the host; standalone tests use a profile-scoped marker fallback. Changing enablement requires restarting existing Hermes sessions.
+
+## Local inference
+
+For enrichment, `--model aux` requires a numeric loopback target on HTTP. The operator can supply `--endpoint` and `--model-id` explicitly or configure the same values in Desktop settings. The endpoint must be `http://127.0.0.1:PORT/v1/chat/completions` (or `[::1]`).
+
+No cloud URLs, DNS hostnames, auth credentials, proxies, automatic redirects or provider fallback. Host-native auxiliary task selection is registered but **not used for network transport** until a supported route can guarantee no remote fallback.
+
+## Storage and portability
+
+The cached index and SQLite sidecar are profile-scoped under the Hermes plugin data root. A broken cache results in no hint rather than an interrupted Hermes turn. Original SKILL.md files are never modified.
+
+## Limitations
+
+Only explicitly trusted roots are scanned. Nontrivial skill platforms, tool requirements and project precedence cannot yet be proven identical to native Hermes discovery. Treat hints as candidates requiring native verification.

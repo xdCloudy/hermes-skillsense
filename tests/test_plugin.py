@@ -9,11 +9,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class StubContext:
     def __init__(self):
-        self.hooks={};self.cli={};self.commands={};self.tasks={}
+        self.hooks={};self.cli={};self.commands={};self.tasks={};self.settings={}
     def register_hook(self,name,fn): self.hooks[name]=fn
     def register_cli_command(self,**kwargs): self.cli[kwargs["name"]]=kwargs
     def register_command(self,name,**kwargs): self.commands[name]=kwargs
     def register_auxiliary_task(self,name,**kwargs): self.tasks[name]=kwargs
+    def get_config(self,key,default=None): return self.settings.get(key,default)
+    def set_config(self,key,value): self.settings[key]=value
 
 def load_plugin():
     spec=importlib.util.spec_from_file_location("skillsense_test",ROOT/"__init__.py",
@@ -32,7 +34,7 @@ class PluginTests(unittest.TestCase):
                 self.assertIn("pre_llm_call",ctx.hooks)
                 self.assertIn("skillrouter",ctx.cli)
                 self.assertIn("skillrouter",ctx.commands)
-                self.assertIn("skillrouter-tagger",ctx.tasks)
+                self.assertIn("skillrouter_tagger",ctx.tasks)
                 self.assertIsNone(ctx.hooks["pre_llm_call"](user_message="decompile apk"))
                 self.assertIn("SkillSense",ctx.commands["skillrouter"]["handler"]("status"))
             finally:
