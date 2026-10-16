@@ -1,5 +1,6 @@
 """Fast, deterministic, no-model/no-network skill hint retrieval."""
 from __future__ import annotations
+from collections import Counter
 import re
 import threading
 from .core import BM25Index, Document, tokenize
@@ -12,6 +13,7 @@ class Router:
     def __init__(self, records: list[dict]):
         self.records = {str(r["id"]):r for r in records if isinstance(r,dict)
                         and isinstance(r.get("id"),str) and isinstance(r.get("name"),str)}
+        self._name_counts = Counter(r["name"] for r in self.records.values())
         self.index = BM25Index(Document(identity,
             " ".join([r.get("name","")]*5
                      + [r.get("description","")]*2
@@ -31,6 +33,8 @@ class Router:
         # We deliberately do NOT use the raw BM25 score as calibrated confidence.
         top = candidates[0]
         primary = self.records[top.skill_id]
+        if self._name_counts[primary["name"]] != 1:
+            return None  # Duplicate names need native Hermes precedence resolution.
         n = primary["name"].replace("-", " ")
         aliases = [str(a).lower() for a in primary.get("aliases") or []]
         exact = (n.lower() in query.lower() or primary["name"].lower() in query.lower()
