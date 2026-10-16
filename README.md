@@ -15,7 +15,7 @@ A lightweight, local-first skill router for [Hermes Agent](https://github.com/No
 </div>
 
 > [!IMPORTANT]
-> **Project status: experimental implementation (v0.2.0), not certified production-ready.** The BM25 router, read-only skill scanner, SQLite sidecar, review commands and strictly local metadata-audit transport are implemented. They are **opt-in**; normal skill hints are disabled until enabled through the CLI. End-to-end testing against a real Hermes installation, skill-eligibility parity and a labelled evaluation set remain release blockers.
+> **Project status: experimental implementation (v0.2.1), not certified production-ready.** The BM25 router, read-only skill scanner, SQLite sidecar, review commands and strictly local metadata-audit transport are implemented. They are **opt-in**; normal skill hints are disabled until enabled through the CLI. End-to-end testing against a real Hermes installation, skill-eligibility parity and a labelled evaluation set remain release blockers.
 
 ## Why SkillSense?
 
@@ -115,7 +115,7 @@ hermes skillrouter review list
 hermes skillrouter review approve android-re
 ```
 
-The CLI requires a **numeric loopback address**, not a hostname or cloud provider, and bypasses proxies and redirects. The Hermes auxiliary task is registered for future native integration, but the host's auxiliary completion API may use remote fallback, so this release intentionally uses the explicit loopback transport instead. There are no bundled model weights, background services, or per-turn inference.
+You may also configure **Enabled**, **Maximum Suggestions**, **Local Model Endpoint**, and **Local Model ID** in Hermes Desktop → Plugins → SkillSense. Restart Hermes after changing routing settings. The CLI requires a **numeric loopback address**, not a hostname or cloud provider, and bypasses proxies and redirects. The Hermes auxiliary task is registered for future native integration, but the host's auxiliary completion API may use remote fallback, so this release intentionally uses the explicit loopback transport instead. There are no bundled model weights, background services, or per-turn inference.
 
 The default scan covers `$HERMES_HOME/skills` (or `~/.hermes/skills`). Extra trusted skill roots can be selected using `--root PATH`; the plugin does not automatically index untrusted project skills. Unsupported platform/requirement declarations are excluded conservatively.
 

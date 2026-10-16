@@ -1,11 +1,32 @@
 name: skillsense
-version: 0.2.0
+version: 0.2.1
 manifest_version: 2
 api_version: 1
-description: "SkillSense: local BM25 skill hints and opt-in, loopback-only metadata auditing"
+description: "SkillSense: local BM25 skill hints, on-demand offline metadata audit and review"
 author: xdCloudy
 license: MIT
 homepage: https://github.com/xdCloudy/hermes-skillsense
 tags: [skills, bm25, local-first, skill-routing, privacy, python]
 provides_hooks:
   - pre_llm_call
+config_schema:
+  enabled:
+    type: bool
+    default: false
+    label: Enable routing hints
+    description: "Opt-in BM25 hints. Restart Hermes after changing."
+  max_suggestions:
+    type: int
+    default: 2
+    label: Maximum suggestions
+    description: "1–3; conservative routing usually gives one."
+  local_endpoint:
+    type: str
+    default: ""
+    label: Local model endpoint
+    description: "Must be http://127.0.0.1:PORT/v1/chat/completions or [::1]; used only for explicit audit."
+  local_model_id:
+    type: str
+    default: ""
+    label: Local model ID
+    description: "OpenAI-compatible local model name; no automatic downloads."

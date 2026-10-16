@@ -1,0 +1,25 @@
+name: Hermes host integration
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  hermes-doctor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Hermes CLI in isolated ephemeral profile
+        shell: bash
+        env:
+          HERMES_HOME: ${{ runner.temp }}/hermes-skillsense-integration
+          CI: "true"
+        run: |
+          curl --fail --silent --show-error --location \
+            https://hermes-agent.nousresearch.com/install.sh -o /tmp/hermes-install.sh
+          bash /tmp/hermes-install.sh --non-interactive --skip-browser --skip-computer-use
+          export PATH="$HOME/.local/bin:$PATH"
+          command -v hermes
+          hermes plugins doctor . --ci
+          hermes plugins validate .

@@ -4,6 +4,11 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+### Implemented for experimental v0.2.1
+- Native Desktop settings for enablement, max suggestions and optional loopback model target (using ctx.get_config / set_config).
+- Suppress repeat hints within a session and prevent direct injection of untrusted skill descriptions.
+- Loopback HTTP integration tests and isolated Hermes plugin-doctor CI workflow.
+
 ### Implemented for experimental v0.2.0
 - Read-only bounded skill scanner with missing frontmatter handling and platform restriction abstention.
 - Transactional SQLite sidecar with source-hash invalidation, pending metadata proposals, approval and rejection.
