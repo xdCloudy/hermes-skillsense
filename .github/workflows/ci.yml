@@ -26,4 +26,6 @@ jobs:
         run: python tools/check_repo.py
       - name: Measure standalone BM25 overhead
         if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
-        run: python tools/benchmark.py
+        run: |
+          python tools/benchmark.py
+          python tools/evaluate.py
