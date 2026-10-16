@@ -4,6 +4,7 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Added opt-in `rebuild --allow-empty` to safely reconcile completely emptied trusted skill roots without pruning unrelated sidecar data.
 - Validate persisted index records (including field types, size bounds and unique IDs) before routing; fall back to native-only metadata on malformed enrichment.
 
 ### Merged hardening since v0.2.2 candidate

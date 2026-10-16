@@ -20,6 +20,20 @@ hermes skillrouter disable
 
 `rebuild` scans the Hermes user's `skills` directory by default, or explicitly trusted `--root` directories. It preserves unrelated roots' metadata. For an installation without local SKILL.md files, `refresh-native` can use skills explicitly returned by the canonical `skills_list()` API, without scanning skill files or invoking a model. Native-plugin bundled skills omitted by that API are not discovered here; their explicit `skill_view("plugin:skill")` loading remains a Hermes capability.
 
+If a previously indexed trusted root becomes empty (all its skills were removed
+or no longer pass the conservative scan), `rebuild` refuses the zero-result
+scan by default rather than implicitly pruning records. Once you have verified
+the root is genuinely empty, run:
+
+```bash
+hermes skillrouter rebuild --root /path/to/confirmed-empty-skills --allow-empty
+```
+
+This removes only sidecar records whose stored source paths are under that
+explicit root, republishes the index and leaves unrelated roots and source
+files intact. `--allow-empty` is intentionally unavailable for model audits.
+A scan that fails due to unreadable files or incomplete traversal still aborts.
+
 A valid local index must exist before routing is enabled. Restart existing Hermes sessions after changing enablement settings; native availability changes should also trigger a refresh.
 
 ## Metadata Clean

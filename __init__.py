@@ -69,8 +69,9 @@ def _rebuild(args) -> str:
         if not root.is_dir():
             raise ValueError(f"Skill root missing or not a directory: {root}")
     skills = scan_skills(roots)
-    if not skills:
-        raise ValueError("No eligible skills found; existing index preserved")
+    if not skills and not getattr(args, "allow_empty", False):
+        raise ValueError("No eligible skills found; existing index preserved. "
+                         "Use 'rebuild --allow-empty' to reconcile a confirmed empty root.")
     conn = open_db()
     try:
         result = sync(conn, skills, roots=roots)
@@ -273,6 +274,9 @@ def _setup(parser):
     for name in ("rebuild","clean"):
         cmd = sub.add_parser(name,help="Read-only scan of trusted skill roots")
         cmd.add_argument("--root",dest="roots",action="append",help="Trusted skills directory")
+        if name=="rebuild":
+            cmd.add_argument("--allow-empty",action="store_true",
+                             help="Explicitly reconcile zero discovered skills, pruning only scanned roots")
         if name=="clean":
             cmd.add_argument("--audit",action="store_true",help="Audit existing and missing metadata")
             cmd.add_argument("--dry-run",action="store_true",help="No database writes or LLM calls")
