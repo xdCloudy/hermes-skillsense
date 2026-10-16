@@ -1,7 +1,7 @@
 """Pure, dependency-free BM25 search primitives for SkillSense.
 
 This core deliberately has no Hermes imports, filesystem activity, model calls,
-network access, or state persistence. The live plugin does NOT use it yet.
+network access, or state persistence. The live router imports BM25Index, Document and tokenize from this module.
 """
 
 from __future__ import annotations

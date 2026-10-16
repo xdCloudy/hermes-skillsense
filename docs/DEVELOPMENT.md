@@ -8,7 +8,7 @@ This repository provides an **experimental native Hermes plugin**, a dependency-
 - Git.
 - An optional up-to-date Hermes Agent installation for integration validation.
 
-The base scaffold uses no third-party Python runtime dependencies and does not download a model.
+The plugin uses only Python standard-library dependencies at runtime and does not download or run a model for ordinary turns.
 
 ## Clone and test
 
@@ -33,7 +33,7 @@ hermes plugins doctor . --ci
 hermes plugins validate .
 ```
 
-Plugin doctor exercises discovery and registration with a temporary `HERMES_HOME`. Neither command is run by the GitHub CI matrix because CI does not install Hermes itself. Record the exact Hermes version when testing.
+Plugin doctor exercises registration in a temporary `HERMES_HOME`. GitHub Actions also runs a separate isolated Hermes host integration workflow and an installation-from-GitHub workflow. The standalone Python test matrix intentionally needs no Hermes installation. Record the tested Hermes version when reproducing host issues.
 
 The native hook emits no hints by default. An operator must rebuild the index and run `hermes skillrouter enable`, then restart Hermes. Only exact or evidence-supported BM25 candidates are suggested; Hermes remains responsible for skill loading.
 
@@ -47,7 +47,7 @@ The native hook emits no hints by default. An operator must rebuild the index an
 
 1. Open an issue for API changes or major security-sensitive behaviour.
 2. Read [AGENTS.md](../AGENTS.md), [ARCHITECTURE.md](../ARCHITECTURE.md) and [SPEC.md](../SPEC.md).
-3. Write pure unit-testable functions; preserve the no-op hook until eligibility and audit tests pass.
+3. Write pure, unit-testable functions; preserve the opt-in and fail-closed pre-LLM hook, and add end-to-end Hermes tests for any eligibility change.
 4. Run the cross-platform test suite and host plugin doctor if available.
 5. Update documentation/CHANGELOG and include reproducible tests in the PR.
 6. Avoid checking in real user SKILL.md documents, private history or secrets.

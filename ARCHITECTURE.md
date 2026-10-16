@@ -1,6 +1,6 @@
 # Architecture
 
-> Design document. No production integration is implemented yet.
+> **Status: implemented experimental beta, not production-certified.** The sections below distinguish active components from intended future integration. The standalone router and real Hermes plugin registration/CLI have passed CI, but session-specific eligibility and independently validated selection quality remain outstanding.
 
 ## Execution domains
 
@@ -8,11 +8,11 @@
 
 ```text
 Hermes pre_llm_call
-  → immutable in-memory index
-  → tokenise current task/context
+  → cached local index and native-eligibility snapshot (refreshed at most once/minute)
+  → tokenise current user request
   → BM25 retrieval
-  → exact name/alias bonuses
-  → native eligibility filter
+  → repeated name/alias terms and whole-phrase gate
+  → canonical native catalogue filter (snapshot captured during maintenance)
   → ambiguity / abstention gate
   → return None or ephemeral {context: hint}
 ```
@@ -32,20 +32,21 @@ Discovery → parse source → hash → deterministic audit
 
 Audit work must not block conversations. If the host has no safe background execution surface, require CLI maintenance rather than spawning unmanaged threads from a chat command.
 
-## Modules (planned)
+## Implemented modules and remaining design work
 
-| Boundary | Responsibility |
+| File | Active responsibility |
 | --- | --- |
-| `discovery` | Hermes catalogue adapter + safe filesystem fallback |
-| `parser` | Read skill YAML/Markdown as untrusted data |
-| `audit` | Missing, vague, stale, duplicate, contradictory metadata |
-| `auxiliary` | Host LLM API adapter + strictly local fallback transport |
-| `validation` | JSON schema, evidence, uniqueness, size and provenance |
-| `storage` | Profile-scoped SQLite, migrations, recovery and overrides |
-| `retrieval` | Pure Python BM25, field weights, filtering, abstention |
-| `hooks` | Hermes hook + lightweight commands |
-| `cli` | status/clean/review/show/rebuild/doctor/benchmark |
-| `benchmark` | Dataset replay, metrics and performance checks |
+| `__init__.py` | Hermes hook registration, CLI commands and explicit metadata maintenance |
+| `catalog.py` | Bounded read-only SKILL.md scanning, restricted frontmatter and proposal validation |
+| `eligibility.py` | Maintenance-time native skill-list capture and safe candidate gating |
+| `store.py` | Profile-scoped SQLite sidecar, source-hash checks, atomic index and catalogue snapshots |
+| `core.py` | Pure Python BM25 implementation |
+| `routing.py` | Conservative matching, abstention, snapshot refresh and session hint deduplication |
+| `local_model.py` | Explicit loopback-only audit transport, bounded responses and best-effort redaction |
+| `tools/evaluate.py` | Synthetic and user-provided offline labelled retrieval evaluation |
+| `tests/` | Unit, local-model stub and real-Hermes CI fixture coverage |
+
+**Not yet implemented:** full Hermes session-scoped catalogue access, an independently held-out relevance benchmark, Desktop audit/review UI, advanced field-granular review and complete audit provenance tables. These remain design targets, not shipping guarantees.
 
 ## Availability & security
 
@@ -57,20 +58,20 @@ Store plugin metadata in the Hermes-managed profile plugin-data directory, not a
 
 ## Durability
 
-- Source SHA-256 + schema/prompt/model versions drive invalidation.
+- Source SHA-256 drives stale-source invalidation; additional model/prompt provenance keys are a future enhancement.
 - Persist approved records and pending proposals separately.
-- Use transactions, busy timeout, explicit migrations, and interruption-safe rebuilds.
+- Use SQLite transactions and a busy timeout; JSON indexes are published atomically. More extensive migration/recovery support remains planned.
 - Readers use a snapshot index; writer atomically publishes an entirely built replacement.
 - Missing or corrupt cache ⇒ return `None`; keep native Hermes functional.
 - Uninstall ⇒ no changes to original skills or Hermes runtime.
 
-## Offline guarantee
+## Model transport trust boundary
 
-The host auxiliary task may not itself guarantee offline routing if it supports cloud fallbacks. Resolve and verify the **effective** provider/endpoint and disable fallback before any skill text is sent. If the host cannot prove locality, use a strictly loopback-only minimal transport or abort. Model load, authentication and network policy are evaluated in [SECURITY.md](SECURITY.md).
+Normal-turn routing does not invoke a model or make network requests. Opt-in cleanup accepts only an explicit numeric loopback inference URL, blocks redirects and bypasses environment HTTP proxies. **This cannot attest that the process listening on loopback does not forward prompts to a remote provider.** Operators must independently verify their local model server and disabled cloud fallbacks. See [SECURITY.md](SECURITY.md).
 
-## Runtime targets (not measured)
+## Runtime targets and evidence
 
-p95 ≤ 5ms for up to 500 skills; <10MB additional memory; zero per-turn model/network/GPU usage; 0–60 hint tokens.
+Targets: p95 ≤ 5ms for up to 500 skills; <10 MB additional memory; zero per-turn model/network/GPU usage; 0–60 hint tokens. On one Ubuntu CI runner, the isolated 500-skill synthetic BM25 microbenchmark measured approximately 1.43ms p95. **Memory, full Hermes hook overhead, token savings and real-world routing accuracy have not been independently certified.**
 
 ## Related material
 
