@@ -8,6 +8,7 @@ import hashlib
 import time
 from .catalog import clean_text
 from .store import read_index
+from .eligibility import native_skill_allowlist, filter_index_to_native
 
 class Router:
     def __init__(self, records: list[dict]):
@@ -77,7 +78,7 @@ def get_router() -> Router:
     if _cache is None:
         with _lock:
             if _cache is None:
-                _cache = Router(read_index())
+                _cache = Router(filter_index_to_native(read_index(), native_skill_allowlist()))
     return _cache
 
 def clear_cache() -> None:
