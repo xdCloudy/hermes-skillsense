@@ -51,10 +51,10 @@ class WorkflowTests(unittest.TestCase):
             argparse.Namespace(review_action="list",skill=None)))
         self.assertIn("Approved",self.plugin._review(
             argparse.Namespace(review_action="approve",skill="android-re")))
-        self.assertIn("enabled",self.plugin._configure(argparse.Namespace(action="enable")))
-        clear_cache()
         from unittest.mock import patch
         save_native_snapshot({"android-re":"Inspect Android APK decompilation"})
+        self.assertIn("enabled",self.plugin._configure(argparse.Namespace(action="enable")))
+        clear_cache()
         self.assertIn("android-re",hint("decompile an Android APK with jadx")["context"])
         self.assertIn("disabled",self.plugin._configure(argparse.Namespace(action="disable")))
 
