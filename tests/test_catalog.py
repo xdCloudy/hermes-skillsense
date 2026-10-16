@@ -73,3 +73,17 @@ class CatalogueTests(unittest.TestCase):
             found=scan_skills([root])
             self.assertEqual(found[0].description,
                              "First non-heading line describing data analysis.")
+
+    def test_truncated_root_scan_fails_before_sync(self):
+        from unittest.mock import patch
+        from skillsense_test.catalog import scan_skills
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            for n in ("one","two"):
+                folder=root/n
+                folder.mkdir()
+                (folder/"SKILL.md").write_text(
+                    "---\\nname: "+n+"\\ndescription: Test skill\\n---\\n")
+            with patch("skillsense_test.catalog.MAX_SKILLS",1):
+                with self.assertRaisesRegex(ValueError,"maximum"):
+                    scan_skills([root])
