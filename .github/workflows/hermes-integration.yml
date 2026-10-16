@@ -93,4 +93,5 @@ jobs:
           print("Verified native catalogue capture and local routing hint.")
           PY
 
+          hermes skillrouter doctor | grep -q "eligible candidates"
           echo "SkillSense Hermes CLI smoke test passed."
