@@ -1,6 +1,6 @@
 # Development Setup
 
-This repository provides an **experimental native Hermes plugin**, a dependency-free BM25 implementation, and tests. Skill routing, metadata audit and review exist behind explicit opt-in, but production end-to-end Hermes compatibility is **not yet verified**.
+This repository provides an **experimental native Hermes plugin**, a dependency-free BM25 implementation, and tests. Skill routing, metadata audit and review exist behind explicit opt-in, but a real Hermes integration smoke test **has passed**; stable skill-selection accuracy and dynamic eligibility are still unverified.
 
 ## Prerequisites
 
@@ -18,6 +18,8 @@ cd hermes-skillsense
 python -m compileall -q __init__.py core.py tests tools
 python -m unittest discover -s tests -v
 python tools/check_repo.py
+python tools/evaluate.py
+python tools/benchmark.py
 ```
 
 For Windows, use `py -3.11` in place of `python` if needed.
