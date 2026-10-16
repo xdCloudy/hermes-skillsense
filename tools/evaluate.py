@@ -73,21 +73,33 @@ def evaluate(catalogue: list[dict], cases: list[dict], variant: str) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--json",action="store_true",help="Machine-readable output")
+    parser.add_argument("--catalogue",type=Path,default=ROOT/"benchmarks/selection-catalogue-v1.json",
+                        help="JSON skill catalogue (offline local file)")
+    parser.add_argument("--cases",type=Path,default=ROOT/"benchmarks/selection-cases-v1.json",
+                        help="JSON labelled prompts (offline local file)")
     args = parser.parse_args()
-    cat = json.loads((ROOT/"benchmarks/selection-catalogue-v1.json").read_text(encoding="utf-8"))
-    fixture = json.loads((ROOT/"benchmarks/selection-cases-v1.json").read_text(encoding="utf-8"))
+    cat = json.loads(args.catalogue.read_text(encoding="utf-8"))
+    fixture = json.loads(args.cases.read_text(encoding="utf-8"))
     cases = fixture["cases"]
+    if cat.get("schema_version") != 1 or fixture.get("schema_version") != 1:
+        raise ValueError("unsupported fixture schema")
+    if not isinstance(cat.get("skills"),list) or not isinstance(fixture.get("cases"),list):
+        raise ValueError("fixture skills and cases must be lists")
     known = {r["name"] for r in cat["skills"]}
     if not cases or len({case["id"] for case in cases}) != len(cases):
         raise ValueError("no cases or duplicate case IDs")
     if any(not isinstance(c.get("gold"),list) or not set(c["gold"]).issubset(known)
            for c in cases):
         raise ValueError("missing or unknown ground truth IDs")
+    if any(not isinstance(c.get("prompt"),str) or not isinstance(c.get("id"),str)
+           or len(c["prompt"]) > 4000 or len(c["id"]) > 120 for c in cases):
+        raise ValueError("invalid case prompt or identifier")
     reports = [evaluate(cat["skills"],cases,variant) for variant in ("names","source","enriched")]
     if args.json:
         print(json.dumps({"dataset":fixture["source"],"results":reports},indent=2))
     else:
-        print("Synthetic development set, NOT independent model quality evidence")
+        print("Offline retrieval fixture:",fixture.get("source","unreviewed provenance"))
+        print("Metrics are NOT independent model quality evidence without held-out labels.")
         for r in reports:
             print(f"{r['variant']:<10} top1={r['precision_at_1_on_positive']:.3f} "
                   f"recall@3={r['recall_at_3_on_positive']:.3f} "
