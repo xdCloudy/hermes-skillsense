@@ -4,6 +4,17 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+### v0.2.2 — candidate (not a stable release)
+
+- Native Hermes `skills_list()` availability gate, safe native-only fallback, and Markdown-description extraction (#9, #12).
+- Synthetic, transparent selection benchmarks and support for user-provided offline labelled datasets (#10, #14).
+- Root-scoped metadata cleanup and source-hash verification before approving proposals, including Windows line-ending correctness (#11).
+- Full local HTTP stub audit → pending → manual approval integration suite, without modifying SKILL.md (#13).
+- Actual Hermes plugin doctor/CLI lifecycle smoke test, plus cross-platform Python 3.11–3.13 tests.
+- Direct remote GitHub installation workflow proposed for additional user-facing verification (#15).
+- Remaining stable blockers: session-level availability parity (#7) and independently reviewed real-world retrieval quality (#8).
+
+
 ### Implemented for experimental v0.2.1
 - Native Desktop settings for enablement, max suggestions and optional loopback model target (using ctx.get_config / set_config).
 - Suppress repeat hints within a session and prevent direct injection of untrusted skill descriptions.
