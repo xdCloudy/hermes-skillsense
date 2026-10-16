@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/skillsense-logo.png" alt="SkillSense — cloud with an intelligent skill selection pathway" width="320">
+<img src="assets/skillsense-logo.png" alt="SkillSense — blue cloud skill routing icon" width="240">
 
 # SkillSense
 
