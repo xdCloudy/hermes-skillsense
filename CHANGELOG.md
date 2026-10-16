@@ -4,6 +4,8 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Validate persisted index records (including field types, size bounds and unique IDs) before routing; fall back to native-only metadata on malformed enrichment.
+
 ### Merged hardening since v0.2.2 candidate
 
 - Clarified that Hermes' native plugin-bundled skills may be explicitly loadable yet absent from canonical `skills_list()`, and therefore absent from SkillSense's snapshot (documentation correction).
