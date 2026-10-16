@@ -42,3 +42,31 @@ class RoutingTests(unittest.TestCase):
                    "tags":["apk"],"aliases":[],"intents":[]}])
         result=r.suggest("android-re")
         self.assertNotIn("\nIGNORE PREVIOUS",result)
+
+    def test_alias_must_match_whole_phrase_tokens(self):
+        from skillsense_test.routing import Router
+        r=Router([{"id":"a","name":"media-review",
+                   "description":"Design and assess digital media workflows",
+                   "tags":["digital","media"],"aliases":["art"],
+                   "negative_intents":[],"intents":[]}])
+        # `art` inside `artifacts` is not an exact alias match.
+        self.assertIsNone(r.suggest("assess digital artifacts"))
+        self.assertIn("media-review",r.suggest("media-review digital media"))
+
+    def test_approved_negative_intent_vetoes_top_candidate(self):
+        from skillsense_test.routing import Router
+        r=Router([{"id":"a","name":"apk-review",
+                   "description":"APK reverse engineering android analysis",
+                   "tags":["apk","android"],"aliases":[],
+                   "negative_intents":["create an Android APK"],
+                   "intents":[]}])
+        self.assertIsNone(r.suggest("create an Android APK"))
+        self.assertIn("apk-review",r.suggest("apk-review reverse engineering"))
+
+    def test_single_negative_word_does_not_overblock(self):
+        from skillsense_test.routing import Router
+        r=Router([{"id":"a","name":"git-workflow",
+                   "description":"Git branch pull request management",
+                   "tags":["git","branch"],"aliases":[],
+                   "negative_intents":["git"],"intents":[]}])
+        self.assertIn("git-workflow",r.suggest("git-workflow branch management"))
