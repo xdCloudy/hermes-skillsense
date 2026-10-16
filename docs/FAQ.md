@@ -10,7 +10,7 @@ A compact lexical index has nearly zero operational overhead. It struggles with 
 
 ### What does "local-only" mean?
 
-No normal-turn network requests; during audit, the selected auxiliary endpoint must be verified loopback-only with remote fallbacks disabled. If it cannot be proven local, the audit stops instead of silently contacting a cloud provider.
+Normal turns make no model/network requests. Audit requests are sent only to an explicit numeric loopback address; HTTP proxy environment variables and redirects are bypassed. **This cannot attest what the loopback service does afterward**: an operator's local inference gateway might forward prompts remotely. For full offline operation, configure and verify a genuinely on-device/local model server without external provider fallbacks.
 
 ### Will the plugin rewrite my installed skills?
 
