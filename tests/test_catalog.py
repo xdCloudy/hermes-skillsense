@@ -127,15 +127,15 @@ class CatalogueTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
             for idx,header in enumerate((
-                "platforms:\\n  - linux",
-                "requires:\\n  bins: [docker]",
-                "environments:\\n  - kanban",
-                "requires_apps:\\n  - github",
-                "metadata:\\n  hermes:\\n    requires_toolsets: [kanban]"
+                "platforms:\n  - linux",
+                "requires:\n  bins: [docker]",
+                "environments:\n  - kanban",
+                "requires_apps:\n  - github",
+                "metadata:\n  hermes:\n    requires_toolsets: [kanban]"
             )):
                 item=root/f"restricted-{idx}"
                 item.mkdir()
                 (item/"SKILL.md").write_text(
-                    "---\\nname: conditional-skill\\ndescription: Conditional skill\\n"
-                    +header+"\\n---\\n# Restricted",encoding="utf-8")
+                    "---\nname: conditional-skill\ndescription: Conditional skill\n"
+                    +header+"\n---\n# Restricted",encoding="utf-8")
             self.assertEqual(scan_skills([root]),[])
