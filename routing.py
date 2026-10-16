@@ -10,15 +10,6 @@ from .catalog import clean_text
 from .store import read_index, read_native_snapshot
 from .eligibility import compose_native_records
 
-def _phrase_in_tokens(phrase: str, query_tokens: tuple[str, ...]) -> bool:
-    """Require complete adjacent tokens, not substrings inside larger words."""
-    parts = tokenize(phrase)
-    n = len(parts)
-    return bool(n and n <= len(query_tokens)
-                and any(query_tokens[i:i+n] == parts
-                        for i in range(len(query_tokens)-n+1)))
-
-
 class Router:
     def __init__(self, records: list[dict]):
         self.records = {str(r["id"]):r for r in records if isinstance(r,dict)
@@ -36,8 +27,7 @@ class Router:
         if not query or not self.records:
             return None
         query = clean_text(query, 1000)
-        ordered_tokens = tokenize(query)
-        query_tokens = set(ordered_tokens)
+        query_tokens = set(tokenize(query))
         candidates = self.index.search(query, limit=6)
         if not candidates:
             return None
@@ -47,17 +37,9 @@ class Router:
         if self._name_counts[primary["name"]] != 1:
             return None  # Duplicate names need native Hermes precedence resolution.
         n = primary["name"].replace("-", " ")
-        aliases = [str(a) for a in primary.get("aliases") or []]
-        exact = (_phrase_in_tokens(n, ordered_tokens)
-                 or _phrase_in_tokens(primary["name"], ordered_tokens)
-                 or any(len(a) >= 4 and _phrase_in_tokens(a, ordered_tokens)
-                        for a in aliases))
-        # Explicitly approved negative intent examples veto an otherwise strong
-        # match. A single generic negative word is insufficient for a veto.
-        if any(len(tokenize(negative)) >= 2
-               and _phrase_in_tokens(negative, ordered_tokens)
-               for negative in primary.get("negative_intents") or []):
-            return None
+        aliases = [str(a).lower() for a in primary.get("aliases") or []]
+        exact = (n.lower() in query.lower() or primary["name"].lower() in query.lower()
+                 or any(len(a) >= 4 and a in query.lower() for a in aliases))
         source_tokens = set(tokenize(" ".join([primary["name"],
                                primary.get("description","")] + list(primary.get("tags") or []))))
         evidence = len(source_tokens & query_tokens)
@@ -73,11 +55,7 @@ class Router:
                 if c.score < top.score * 0.8:
                     break
                 r = self.records[c.skill_id]
-                if (r["name"] not in seen
-                    and len(set(tokenize(r["name"])) & query_tokens) >= 1
-                    and not any(len(tokenize(negative)) >= 2
-                                and _phrase_in_tokens(negative, ordered_tokens)
-                                for negative in r.get("negative_intents") or [])):
+                if r["name"] not in seen and len(set(tokenize(r["name"])) & query_tokens) >= 1:
                     selected.append(c)
                     seen.add(r["name"])
                     break
@@ -91,22 +69,29 @@ class Router:
         return "Potentially relevant installed skills (verify availability; open with skill_view if needed):\n" + "\n".join(names)
 
 _cache: Router | None = None
+_cache_refreshed = 0.0
+_CACHE_REFRESH_SECONDS = 60.0
 _lock = threading.Lock()
 _recent_lock = threading.Lock()
 _recent: dict[str, tuple[str,float]] = {}
 
 def get_router() -> Router:
-    global _cache
-    if _cache is None:
+    """Recheck index/snapshot once a minute; never trust expired eligibility forever."""
+    global _cache, _cache_refreshed
+    now = time.monotonic()
+    if _cache is None or now - _cache_refreshed >= _CACHE_REFRESH_SECONDS:
         with _lock:
-            if _cache is None:
+            now = time.monotonic()
+            if _cache is None or now - _cache_refreshed >= _CACHE_REFRESH_SECONDS:
                 _cache = Router(compose_native_records(read_index(), read_native_snapshot()))
+                _cache_refreshed = now
     return _cache
 
 def clear_cache() -> None:
-    global _cache
+    global _cache, _cache_refreshed
     with _lock:
         _cache = None
+        _cache_refreshed = 0.0
 
 def hint(user_message: str, max_suggestions: int = 2, session_id: str = "") -> dict | None:
     try:
