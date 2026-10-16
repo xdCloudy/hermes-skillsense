@@ -34,6 +34,7 @@ class WorkflowTests(unittest.TestCase):
     def test_rebuild_audit_review_enable(self):
         from skillsense_test.store import open_db,rows,publish_index,stage
         from skillsense_test.routing import clear_cache,hint
+        from skillsense_test.store import save_native_snapshot
         self.assertIn("Rebuilt",self.plugin._rebuild(argparse.Namespace(roots=None)))
         self.assertIn("1 skills",self.plugin._status())
         dry=self.plugin._clean(argparse.Namespace(roots=None,model="none",dry_run=True,
@@ -53,10 +54,21 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn("enabled",self.plugin._configure(argparse.Namespace(action="enable")))
         clear_cache()
         from unittest.mock import patch
-        with patch("skillsense_test.routing.native_skill_allowlist",
-                   return_value={"android-re":"Inspect Android APK decompilation"}):
-            self.assertIn("android-re",hint("decompile an Android APK with jadx")["context"])
+        save_native_snapshot({"android-re":"Inspect Android APK decompilation"})
+        self.assertIn("android-re",hint("decompile an Android APK with jadx")["context"])
         self.assertIn("disabled",self.plugin._configure(argparse.Namespace(action="disable")))
+
+    def test_successful_metadata_audit_refreshes_native_snapshot(self):
+        from unittest.mock import patch
+        from skillsense_test.store import read_native_snapshot
+        available={"android-re":"Inspect Android APK decompilation"}
+        with patch("skillsense_test.eligibility.native_skill_allowlist",
+                   return_value=available):
+            result=self.plugin._clean(argparse.Namespace(
+                roots=None, model="none",dry_run=False,force=False,
+                endpoint=None,model_id=None))
+        self.assertIn("Audit completed",result)
+        self.assertEqual(read_native_snapshot(),available)
 
     def test_malicious_remote_url_fails_before_scan(self):
         from skillsense_test.local_model import LocalOnlyError
