@@ -209,8 +209,19 @@ def _slash(args: str, ctx=None) -> str:
 def register(ctx):
     from .routing import hint
     from .store import data_dir
-    active = (data_dir()/"enabled.flag").exists() or bool(ctx.get_config("enabled",default=False))
-    max_suggestions = max(1,min(3,int(ctx.get_config("max_suggestions",default=2))))
+    # Malformed/unsupported plugin settings must not break Hermes startup.
+    try:
+        active = (data_dir()/"enabled.flag").exists() or (
+            ctx.get_config("enabled",default=False) is True)
+    except Exception:
+        active = False
+    try:
+        raw_limit = ctx.get_config("max_suggestions",default=2)
+        max_suggestions = max(1,min(3,int(raw_limit))) if not isinstance(raw_limit,bool) else 2
+    except (TypeError,ValueError,OverflowError):
+        max_suggestions = 2
+    except Exception:
+        max_suggestions = 2
     def on_turn(user_message="",session_id="",**kwargs):
         return hint(user_message,max_suggestions=max_suggestions,session_id=session_id) if active else None
     ctx.register_hook("pre_llm_call",on_turn)
