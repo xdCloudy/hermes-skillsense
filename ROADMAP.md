@@ -1,27 +1,28 @@
 # Roadmap
 
-SkillSense is **pre-alpha / planning**. These are intended milestones, not delivered features.
+**Current state:** v0.2.2 experimental beta candidate. SkillSense is functional and opt-in, but **not production-certified**. Do not call the synthetic evaluation a real-world accuracy benchmark.
 
-| Milestone | Scope | Gate |
+| Milestone | Status | Completed or pending work |
 | --- | --- | --- |
-| M0: Bootstrap (complete) | Brand, docs, issue templates, licence, agent guidance, first testable scaffold | Repository structure verified |
-| M1: Plugin skeleton (requires Hermes host verification) | Native manifest, registration, no-op hook, CLI/slash status added | Still needs Hermes doctor/validator and install/uninstall verification |
-| M2: Lexical retrieval (experimental) | Safe skill discovery, parser, BM25, availability filters, abstention | Reproducible retrieval tests; normal Hermes still works |
-| M3: Sidecar storage (implemented; needs integration testing) | SQLite schema, versioning, atomic indexes, profile isolation | Integrity and migration tests |
-| M4: Deterministic audit (basic) | Metadata quality checks, hashing, dry-run, reports | No model necessary |
-| M5: Local audit transport (implemented) | Strict local-only routing, schema generation, source evidence checks | Remote exfiltration tests fail closed |
-| M6: Review CLI (implemented; Desktop pending) | Field-level approval, CLI/slash, Desktop settings | Accessible, reversible review; no source edits |
-| M7: Benchmark & release | Performance + recall metrics, Windows/macOS/Linux CI, packaging | Published reproducible data; native plugin validation |
+| M0: Bootstrap | Complete | Public repository, branding, contributor/security docs, MIT licence |
+| M1: Native plugin | Verified in CI | Hermes plugin doctor, manifest validation and isolated CLI lifecycle |
+| M2: BM25 routing | Experimental | Names, descriptions, tags, aliases, intents, abstention and native skill gate |
+| M3: Sidecar integrity | Verified in CI | SQLite transactions, source-hash invalidation, root-scoped pruning, safe approval |
+| M4: Metadata Clean | Verified with stub | Audit, local-only inference, pending proposals, approval/rejection |
+| M5: Cross-platform | Passing | Python 3.11/3.12/3.13 on Windows, Linux and macOS |
+| M6: Evaluation infrastructure | Implemented | Synthetic smoke dataset, custom local labelled datasets, reproducible measurements |
+| M7: Stable release | **Blocked** | Real held-out selection quality, dynamic/session skill eligibility parity, direct install verification |
 
-## Release policy
+## Release blockers
 
-Do not publish a "stable" package or documentation implying working commands until M1–M6 have passed. For beta, define supported Hermes versions, migration guarantees and benchmark datasets. All stages require zero modification to user skill source files.
+1. [#7 Native session-level skill availability](https://github.com/xdCloudy/hermes-skillsense/issues/7): Hermes can vary skill visibility by project, environment, platform and session; the present router verifies a canonical snapshot at first use and requires restart for changes.
+2. [#8 Independently labelled real-world benchmark](https://github.com/xdCloudy/hermes-skillsense/issues/8): authored synthetic fixtures demonstrate functionality but cannot prove production selection accuracy.
 
-## Future considerations
+## Longer-term ideas
 
-- Optional local tiny reranker only if independent benchmarks justify the additional cost.
-- Metadata profiles shared with compatible agent harnesses.
-- First-class Desktop review pane if supported by the Desktop Plugin SDK.
-- Better historical usage analysis, with explicit opt-in and privacy controls.
+- Optional tiny local reranker only if measured recall improves enough to justify its memory and latency.
+- Authenticated Desktop controls for metadata review when supported by Hermes.
+- Export/import metadata with stable provenance and user approval.
+- Additional host/plugin compatibility tests and independently reproduced performance measurements.
 
-Track work in GitHub Issues; link pull requests to milestones. See [SPEC.md](SPEC.md).
+See [SPEC.md](SPEC.md), [docs/EVALUATION.md](docs/EVALUATION.md), and [docs/RELEASING.md](docs/RELEASING.md).
