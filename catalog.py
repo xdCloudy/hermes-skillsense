@@ -44,6 +44,14 @@ def frontmatter(text: str) -> tuple[dict[str, object], str]:
         match = re.match(r"^([a-zA-Z][\w-]*):\s*(.*)$", stripped)
         if match:
             key, val = match.groups()
+            # Hermes supports conditional availability through several YAML
+            # keys. Do not enrich/index a conditional source based on an
+            # incomplete YAML parser; allow only the canonical native entry.
+            # A block-form declaration (key: followed by indented values)
+            # is still conditional even when the first line is empty.
+            if key in {"platforms", "requires", "environments",
+                       "requires_apps", "requires_toolsets", "requires_env"}:
+                data["conditional"] = True
             if indent == 0:
                 scope = key
                 if key in ("name", "description", "platforms", "requires"):
@@ -105,7 +113,7 @@ def scan_skills(roots: list[Path]) -> list[Skill]:
             name = str(metadata.get("name") or path.parent.name).lower()
             if not _NAME.fullmatch(name):
                 continue
-            if metadata.get("platforms") or metadata.get("requires"):
+            if metadata.get("conditional"):
                 continue  # Can't safely infer Hermes availability requirements.
             rel = path.parent.relative_to(root).as_posix()
             identity = f"{root.as_posix()}::{rel}"
