@@ -21,7 +21,7 @@ Protected assets include installed skill sources, local model prompts/data, Herm
 - **No skill-file writes:** metadata lives in a plugin-owned sidecar.
 - **No arbitrary execution:** never run scripts, shell commands or URLs from a skill while indexing.
 - **Constrained files:** restrict skill roots and prevent symlink/path traversal outside approved locations.
-- **Verified local model:** check effective endpoint, provider and fallback; only loopback destinations are eligible. Prevent proxy/redirect escape and avoid implicit remote DNS. If locality is unknown, do not send content.
+- **Loopback-only audit transport:** accept only numeric loopback HTTP destinations, bypass environment proxies, and reject redirects and remote DNS. This limits SkillSense's direct connection but cannot attest that the local receiving server uses local weights or does not forward input to cloud backends. Operators must separately verify the model server and disable its external fallbacks.
 - **Trust boundaries:** the LLM sees skill documents as untrusted data; all output is independently validated. JSON parse success is insufficient.
 - **Data minimisation:** bound skill excerpts; redact secret-looking content where possible; no raw skill content or prompts in normal logs.
 - **Safe database:** SQLite transactions, explicit migrations, cross-process locking and previous-good recovery; segregate profile data.

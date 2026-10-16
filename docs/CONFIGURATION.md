@@ -30,7 +30,7 @@ The CLI `enable`/`disable` commands use the supported Hermes plugin settings API
 
 For enrichment, `--model aux` requires a numeric loopback target on HTTP. The operator can supply `--endpoint` and `--model-id` explicitly or configure the same values in Desktop settings. The endpoint must be `http://127.0.0.1:PORT/v1/chat/completions` (or `[::1]`).
 
-No cloud URLs, DNS hostnames, auth credentials, proxies, automatic redirects or provider fallback. Host-native auxiliary task selection is registered but **not used for network transport** until a supported route can guarantee no remote fallback.
+SkillSense refuses non-loopback URLs, DNS hostnames, URL credentials and redirects, and bypasses environment-configured HTTP proxies. Its HTTP transport has no provider fallback. **This only constrains the destination of SkillSense's request**: a local model gateway or proxy can still forward input to external services. Confirm that the server bound to the loopback address uses local weights and has remote fallback disabled. Host-native auxiliary task selection is registered but is **not used for model transport**.
 
 ## Storage and portability
 

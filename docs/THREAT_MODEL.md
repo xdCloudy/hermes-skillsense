@@ -10,7 +10,7 @@ Private skills, Hermes user profile, auth tokens, local inference endpoint, side
 | --- | --- | --- |
 | Installed skill Markdown/YAML | Untrusted content | Parse as inert data, no command execution |
 | Model-generated metadata | Untrusted | Validate type, length, evidence and review status |
-| User-configured auxiliary provider | Potentially remote | Verify effective route and block fallback |
+| User-configured loopback server | Could proxy externally despite local address | Restrict direct connection to numeric loopback; require operator verification of server behavior |
 | Local sidecar DB | Durable but corruptible | Transactions, migrations, last-known-good index |
 | Gateway slash commands | Potentially external users | Authorisation and no unsafe long jobs |
 | Plugin host API | Trusted documented boundary | No monkey-patching; conservative availability |
@@ -18,7 +18,7 @@ Private skills, Hermes user profile, auth tokens, local inference endpoint, side
 ## Important failure cases
 
 - An apparently local model URL redirects externally.
-- A provider silently switches to a cloud fallback.
+- The process bound to a numeric loopback endpoint silently relays skill contents to a cloud provider.
 - A symlink in a skill directory points to private files.
 - Skill YAML embeds malicious prompt instructions.
 - A generated alias misclassifies a dangerous capability.
@@ -28,6 +28,6 @@ Private skills, Hermes user profile, auth tokens, local inference endpoint, side
 
 ## Security invariants
 
-Normal turns perform no network/model calls and ideally no disk writes. The optional audit never sends skill text until endpoint locality is proven. Originals are never modified. Any uncertain state fails to "no suggestion" or refuses the audit, without breaking Hermes.
+Normal turns perform no network/model calls and ideally no disk writes. The optional audit sends skill text only to an explicit numeric loopback endpoint (with proxy/redirect bypass), but cannot attest that the receiving process will not forward it. Originals are never modified. Any uncertain state fails to "no suggestion" or refuses the audit, without breaking Hermes.
 
 See [SECURITY.md](../SECURITY.md) for reporting and mandatory tests.

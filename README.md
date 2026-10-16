@@ -62,7 +62,7 @@ Neither skill bodies nor generated metadata should be written back to third-part
 | Runtime inference | **None** — no inference calls during ordinary turns |
 | Privacy | Local-only by default; fail closed if auxiliary inference would leave the machine |
 | Metadata Clean | Opt-in audit, pending proposals, manual approval, stale-source invalidation |
-| AI enrichment | Registered Hermes auxiliary task; currently calls explicit, numeric loopback OpenAI-compatible endpoint to **guarantee no cloud fallback** |
+| AI enrichment | Registered Hermes auxiliary task; uses a numeric loopback OpenAI-compatible endpoint and disables client-side proxies/redirects; a locally hosted forwarding proxy is outside the plugin's control |
 | Storage | Profile-scoped SQLite sidecar; skill source files unchanged |
 | Compatibility | Native Hermes plugin interfaces; Windows, Linux, macOS |
 | Fallback | Return no hint rather than interrupt the agent |
@@ -127,7 +127,7 @@ hermes skillrouter review list
 hermes skillrouter review approve android-re
 ```
 
-You may also configure **Enabled**, **Maximum Suggestions**, **Local Model Endpoint**, and **Local Model ID** in Hermes Desktop → Plugins → SkillSense. Restart Hermes after changing routing settings. The CLI requires a **numeric loopback address**, not a hostname or cloud provider, and bypasses proxies and redirects. The Hermes auxiliary task is registered for future native integration, but the host's auxiliary completion API may use remote fallback, so this release intentionally uses the explicit loopback transport instead. There are no bundled model weights, background services, or per-turn inference.
+You may also configure **Enabled**, **Maximum Suggestions**, **Local Model Endpoint**, and **Local Model ID** in Hermes Desktop → Plugins → SkillSense. Restart Hermes after changing routing settings. The CLI requires a **numeric loopback address**, not a hostname or cloud provider, and bypasses proxies and redirects. The Hermes auxiliary task is registered for future native integration, but the host's auxiliary completion API may use remote fallback, so this release intentionally uses the explicit loopback transport instead. A numeric loopback URL constrains **SkillSense's outgoing connection**, but cannot prove the server behind it runs a genuinely local model or does not forward data elsewhere. Verify your chosen inference server's configuration. There are no bundled model weights, background services, or per-turn inference.
 
 For isolated Hermes plugin hosts, `skillrouter rebuild` also captures the canonical Hermes skill catalogue into a local sidecar snapshot. The runtime reads that snapshot without importing host-only modules. **The snapshot expires after seven days**; run `hermes skillrouter rebuild` after skill/profile changes or if hints stop appearing. Missing or expired snapshots cause no suggestions, never unverified ones.
 
