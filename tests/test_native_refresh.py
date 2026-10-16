@@ -1,0 +1,66 @@
+"""Hermes-native availability refresh works without a SKILL.md directory."""
+import os
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+from test_plugin import load_plugin
+
+class NativeRefreshTests(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory()
+        self.old=os.environ.get("HERMES_HOME")
+        os.environ["HERMES_HOME"]=self.temp.name
+        self.plugin=load_plugin()
+
+    def tearDown(self):
+        if self.old is None:
+            os.environ.pop("HERMES_HOME",None)
+        else:
+            os.environ["HERMES_HOME"]=self.old
+        self.temp.cleanup()
+
+    def test_plugin_only_catalogue_refresh_without_skill_files(self):
+        from skillsense_test.store import read_native_snapshot,read_index
+        from skillsense_test.routing import clear_cache,hint
+        allowed={"plugin:diagram":"Generate architecture diagrams for networks"}
+        with patch("skillsense_test.eligibility.native_skill_allowlist",
+                   return_value=allowed):
+            result=self.plugin._refresh_native()
+        self.assertIn("1 skills",result)
+        self.assertEqual(read_native_snapshot(),allowed)
+        self.assertEqual(read_index(),[])
+        clear_cache()
+        self.assertIn("plugin:diagram",hint("plugin:diagram architecture networks")["context"])
+
+    def test_empty_native_result_preserves_existing_catalogue(self):
+        from skillsense_test.store import save_native_snapshot,read_native_snapshot
+        before={"existing":"Handle Git repository maintenance"}
+        save_native_snapshot(before)
+        with patch("skillsense_test.eligibility.native_skill_allowlist",return_value={}):
+            with self.assertRaisesRegex(RuntimeError,"existing snapshot preserved"):
+                self.plugin._refresh_native()
+        self.assertEqual(read_native_snapshot(),before)
+
+    def test_refresh_does_not_remove_cached_approved_data(self):
+        from skillsense_test.store import open_db,sync,rows
+        from skillsense_test.catalog import Skill
+        import hashlib
+        root=Path(self.temp.name)
+        skill=root/"SKILL.md"
+        skill.write_text("Hermes native skills",encoding="utf-8")
+        item=Skill("profile::existing","existing","Git repository maintenance",(),(),
+                   str(skill),hashlib.sha256(skill.read_bytes()).hexdigest())
+        conn=open_db()
+        try:
+            sync(conn,[item])
+        finally:
+            conn.close()
+        with patch("skillsense_test.eligibility.native_skill_allowlist",
+                   return_value={"existing":"Git repository maintenance"}):
+            self.plugin._refresh_native()
+        conn=open_db()
+        try:
+            self.assertEqual(len(rows(conn)),1)
+        finally:
+            conn.close()
