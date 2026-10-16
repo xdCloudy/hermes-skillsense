@@ -87,3 +87,37 @@ class CatalogueTests(unittest.TestCase):
             with patch("skillsense_test.catalog.MAX_SKILLS",1):
                 with self.assertRaisesRegex(ValueError,"maximum"):
                     scan_skills([root])
+
+    def test_unreadable_skill_aborts_scan_instead_of_pruning(self):
+        from unittest.mock import patch
+        from skillsense_test.catalog import scan_skills
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            directory=root/"unreadable"
+            directory.mkdir()
+            (directory/"SKILL.md").write_text("# Existing skill")
+            with patch.object(Path,"read_text",side_effect=PermissionError("locked")):
+                with self.assertRaisesRegex(ValueError,"Unreadable"):
+                    scan_skills([root])
+
+    def test_oversized_skill_aborts_scan(self):
+        from unittest.mock import patch
+        from skillsense_test.catalog import scan_skills
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp); directory=root/"oversized"; directory.mkdir()
+            (directory/"SKILL.md").write_text("Large skill body",encoding="utf-8")
+            with patch("skillsense_test.catalog.MAX_SKILL_BYTES",3):
+                with self.assertRaisesRegex(ValueError,"size limit"):
+                    scan_skills([root])
+
+    def test_unreadable_subdirectory_aborts_walk(self):
+        from unittest.mock import patch
+        from skillsense_test.catalog import scan_skills
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            def failing_walk(*args,**kwargs):
+                kwargs["onerror"](PermissionError("cannot descend"))
+                yield from ()
+            with patch("skillsense_test.catalog.os.walk",side_effect=failing_walk):
+                with self.assertRaisesRegex(OSError,"incomplete"):
+                    scan_skills([root])
