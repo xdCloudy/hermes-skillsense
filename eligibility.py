@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import Counter
 import json
 from typing import Any
+import re
 
 
 def native_skill_allowlist() -> dict[str, str]:
@@ -35,6 +36,8 @@ def native_skill_allowlist() -> dict[str, str]:
                     or not isinstance(desc, str)):
                 continue
             parsed.append((name, desc))
+        parsed = [(name,desc) for name,desc in parsed
+                  if re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_./:-]{0,199}",name)]
         duplicates = Counter(name for name, _ in parsed)
         return {name: desc for name, desc in parsed if duplicates[name] == 1}
     except Exception:
@@ -67,3 +70,24 @@ def filter_index_to_native(records: list[dict], available: dict[str, str]) -> li
             continue
         eligible.append(record)
     return eligible
+
+def compose_native_records(records: list[dict], available: dict[str, str]) -> list[dict]:
+    """Index enriched local matches and safe native-only fallback entries.
+
+    Plugin-provided or unsupported-source skills may be absent from the
+    sidecar; their *native* descriptions remain searchable without enrichment.
+    Never apply a possibly shadowed/stale local sidecar to these entries.
+    """
+    from .catalog import clean_text
+    matched = filter_index_to_native(records, available)
+    used = {r["name"] for r in matched}
+    for name, description in sorted(available.items()):
+        if name in used or not description or not description.strip():
+            continue
+        matched.append({
+            "id": "native::" + name, "name": name,
+            "source_description": description,
+            "description": clean_text(description, 240),
+            "tags": [], "aliases": [], "intents": [], "negative_intents": [],
+        })
+    return matched
