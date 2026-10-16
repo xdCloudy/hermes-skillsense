@@ -28,7 +28,7 @@ The CLI `enable` command refuses activation until both the published index and a
 
 ## Canonical skill availability
 
-`hermes skillrouter rebuild` stores trusted local skill metadata and refreshes the canonical native skill snapshot. `hermes skillrouter refresh-native` refreshes only Hermes-native/plugin-provided skill names and descriptions, including profiles without a user skill folder. Snapshot validity is bounded to seven days. A missing, empty or expired catalogue suppresses routing hints.
+`hermes skillrouter rebuild` stores trusted local skill metadata and refreshes the canonical native skill snapshot. `hermes skillrouter refresh-native` refreshes only names and descriptions actually returned by Hermes' `skills_list()`, including in some profiles without a user skill folder. This does **not** imply discovery of native-plugin bundled skills that the host deliberately omits from the list. Snapshot validity is bounded to seven days. A missing, empty or expired catalogue suppresses routing hints.
 
 A cache is not a session-scoped authorization decision: individual project directories and changes to tool/environment availability are still covered by [issue #7](https://github.com/xdCloudy/hermes-skillsense/issues/7).
 
