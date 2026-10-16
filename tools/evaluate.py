@@ -48,9 +48,9 @@ def evaluate(catalogue: list[dict], cases: list[dict], variant: str) -> dict:
     for item in catalogue:
         record = dict(item)
         if variant == "names":
-            record.update(description="",tags=[],aliases=[],intents=[])
+            record.update(description="",tags=[],aliases=[],intents=[],negative_intents=[])
         elif variant == "source":
-            record.update(aliases=[],intents=[])
+            record.update(aliases=[],intents=[],negative_intents=[])
         data.append(record)
     router = Router(data)
     top1 = hits = relevant = no_skill = false_positives = correct_abstentions = 0

@@ -12,7 +12,7 @@ REQUIRED = [
     "routing.py", "eligibility.py", "local_model.py", "assets/skillsense-logo.png",
     "docs/DEVELOPMENT.md", "docs/CONFIGURATION.md", "docs/BENCHMARKS.md",
     "docs/INTEGRATION.md", "docs/METADATA_SCHEMA.md", "docs/EVALUATION.md",
-    "tools/evaluate.py", "tools/routing_import.py",
+    "tools/evaluate.py", "tools/export_catalogue.py", "tools/routing_import.py",
     "benchmarks/selection-cases-v1.json", "benchmarks/selection-catalogue-v1.json",
     "tests/test_core.py", "tests/test_plugin.py", "tests/test_eligibility.py",
     "tests/test_clean_integration.py", "tests/test_evaluation.py",
