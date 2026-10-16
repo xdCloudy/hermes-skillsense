@@ -158,3 +158,34 @@ class PluginTests(unittest.TestCase):
             finally:
                 if previous is None: os.environ.pop("HERMES_HOME",None)
                 else: os.environ["HERMES_HOME"]=previous
+
+    def test_doctor_reports_corrupt_index_not_misleading_healthy_state(self):
+        import json
+        with tempfile.TemporaryDirectory() as temp:
+            prior = os.environ.get("HERMES_HOME")
+            os.environ["HERMES_HOME"] = temp
+            try:
+                plugin = load_plugin()
+                from skillsense_test.store import (open_db, publish_index,
+                                                  save_native_snapshot, data_dir)
+                conn = open_db()
+                try:
+                    publish_index(conn)
+                finally:
+                    conn.close()
+                save_native_snapshot({"android-re":"Inspect Android APKs"})
+                self.assertIn("eligible candidates", plugin._diagnostics())
+
+                (data_dir()/"index.json").write_text(
+                    json.dumps({"schema": 1, "skills": [
+                        {"id":"injected","name":"android-re","aliases":"bad"}
+                    ]}), encoding="utf-8")
+                result = plugin._diagnostics()
+                self.assertIn("index invalid", result)
+                self.assertIn("native-only", result)
+                self.assertIn("rebuild", result)
+            finally:
+                if prior is None:
+                    os.environ.pop("HERMES_HOME", None)
+                else:
+                    os.environ["HERMES_HOME"] = prior

@@ -46,7 +46,7 @@ Local inference is **bounded to 10 requests per invocation by default** (configu
 
 ## Doctor and slash command
 
-`hermes skillrouter status` separately reports sidecar records and currently verified native skills; if routing is configured but the native catalogue has expired or disappeared it reports **configured but inactive** rather than implying hints are available. `hermes skillrouter doctor` reports integration/index readiness. In addition to missing indexes, it can detect missing or expired canonical snapshots. `/skillrouter status` is deliberately read-only; authenticated local CLI commands are required for modifications.
+`hermes skillrouter status` separately reports sidecar records and currently verified native skills; if routing is configured but the native catalogue has expired or disappeared it reports **configured but inactive** rather than implying hints are available. `hermes skillrouter doctor` reports integration/index readiness. In addition to missing indexes, it detects invalid/unreadable index data and missing or expired canonical snapshots. A malformed enrichment index causes native-only fallback rather than a crash; the doctor reports the problem and recommends `rebuild`. `/skillrouter status` is deliberately read-only; authenticated local CLI commands are required for modifications.
 
 ## Limitations
 
