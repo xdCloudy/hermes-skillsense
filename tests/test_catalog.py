@@ -55,10 +55,21 @@ class CatalogueTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)/"one";root.mkdir()
             (root/"sample").mkdir()
-            (root/"sample"/"SKILL.md").write_text("# Sample skill\\n## When to Use\\nReview code.")
+            (root/"sample"/"SKILL.md").write_text("# Sample skill\n## When to Use\nReview code.")
             link=Path(temp)/"link"
             try:
                 link.symlink_to(root,target_is_directory=True)
             except (OSError,NotImplementedError):
                 self.skipTest("symlink creation unsupported")
             self.assertEqual(len(scan_skills([link])),1)  # explicit trusted root resolves
+
+    def test_missing_frontmatter_description_uses_native_body_fallback(self):
+        from skillsense_test.catalog import scan_skills
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);directory=root/"markdown-only";directory.mkdir()
+            (directory/"SKILL.md").write_text(
+                "# Markdown skill\n\nFirst non-heading line describing data analysis.\n"
+                "## When to Use\nAnalyse some data.",encoding="utf-8")
+            found=scan_skills([root])
+            self.assertEqual(found[0].description,
+                             "First non-heading line describing data analysis.")

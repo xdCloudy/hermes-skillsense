@@ -57,6 +57,11 @@ def frontmatter(text: str) -> tuple[dict[str, object], str]:
     data["tags"] = tags[:12]
     return data, body
 
+def _fallback_description(body: str) -> str:
+    """Mirror Hermes' first non-heading body-line fallback for missing descriptions."""
+    return clean_text(next((line for line in map(str.strip, body.strip().split("\n"))
+                            if line and not line.startswith("#")), ""), 240)
+
 def _activation(body: str) -> str:
     found = re.search(r"(?im)^#{1,3}\s*(when to use|use cases|triggers)\b[^\n]*\n", body)
     if not found:
@@ -102,7 +107,7 @@ def scan_skills(roots: list[Path]) -> list[Skill]:
                          if clean_text(str(t), 40))[:12]
             trigger = _activation(instructions)
             found[identity] = Skill(identity, name,
-                clean_text(str(metadata.get("description", ""))),
+                clean_text(str(metadata.get("description", ""))) or _fallback_description(instructions),
                 tags, (trigger,) if trigger else (), str(path),
                 hashlib.sha256(body.encode("utf-8")).hexdigest())
     return sorted(found.values(), key=lambda s: (s.name, s.identity))
