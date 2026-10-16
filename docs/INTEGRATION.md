@@ -14,7 +14,7 @@
 
 ## Maintenance APIs
 
-`hermes skillrouter rebuild` scans only selected trusted local roots, updates the SQLite sidecar and publishes a new index. `hermes skillrouter refresh-native` refreshes native and plugin skill availability without reading local SKILL.md sources. The latter also supports profiles with no local skill directory.
+`hermes skillrouter rebuild` scans only selected trusted local roots, updates the SQLite sidecar and publishes a new index. `hermes skillrouter refresh-native` refreshes only names that the host's `skills_list()` actually returns without reading local SKILL.md sources. This also supports profiles with no local skill directory when the host lists other available skills. Unlike portable plugin-package skills, native-plugin bundled skills registered with `ctx.register_skill()` are ordinarily excluded from `skills_list()` and therefore cannot be discovered by this importer.
 
 `hermes skillrouter clean --audit` is explicitly invoked and may use an operator-provided numeric HTTP loopback inference endpoint. It produces pending sidecar metadata; only manual `review approve` activates a proposal. A changed source hash invalidates its pending/approved enrichment. Source SKILL.md files are never rewritten.
 
@@ -24,7 +24,7 @@ The hook has no per-turn model inference or network requests. The optional audit
 
 The `PluginContext` registration APIs and `pre_llm_call` ephemeral-context response have been validated in an actual Hermes test installation. However, `tools.skills_tool.skills_list()` is an internal module imported by maintenance commands, not a guaranteed stable plugin SDK interface.
 
-More importantly, the snapshot is profile-wide rather than fully session-specific. Project trust, working-directory changes, environment/toolset gates and disabled skills can alter what a particular session can load. Until Hermes offers a documented context-aware skill availability API, **issue #7 remains a release blocker**. The router intentionally abstains when it cannot verify eligibility.
+More importantly, the snapshot is profile-wide rather than fully session-specific, and the listed-catalogue contract omits certain explicitly loadable native-plugin skills. Project trust, working-directory changes, environment/toolset gates and disabled skills can alter what a particular session can load. Until Hermes offers a documented context-aware skill availability API, **issue #7 remains a release blocker**. The router intentionally abstains when it cannot verify eligibility.
 
 **Issue #8** remains a separate release blocker: the included retrieval benchmark is synthetic and not independently labelled. The independent accuracy evaluator is documented in [EVALUATION.md](EVALUATION.md).
 

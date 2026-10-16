@@ -18,7 +18,7 @@ hermes skillrouter disable
 
 ## Build or refresh the catalogue
 
-`rebuild` scans the Hermes user's `skills` directory by default, or explicitly trusted `--root` directories. It preserves unrelated roots' metadata. For an installation containing only native/plugin-provided skills, `refresh-native` refreshes their canonical availability without scanning SKILL.md files or invoking a model.
+`rebuild` scans the Hermes user's `skills` directory by default, or explicitly trusted `--root` directories. It preserves unrelated roots' metadata. For an installation without local SKILL.md files, `refresh-native` can use skills explicitly returned by the canonical `skills_list()` API, without scanning skill files or invoking a model. Native-plugin bundled skills omitted by that API are not discovered here; their explicit `skill_view("plugin:skill")` loading remains a Hermes capability.
 
 A valid local index must exist before routing is enabled. Restart existing Hermes sessions after changing enablement settings; native availability changes should also trigger a refresh.
 

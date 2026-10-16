@@ -6,7 +6,9 @@ All notable project changes will be documented here. Release entries will follow
 
 ### Merged hardening since v0.2.2 candidate
 
-- Hardened text-only hot-path routing against multimodal input coercion, oversized-turn normalization and duplicate-name secondary hints (pending PR).
+- Clarified that Hermes' native plugin-bundled skills may be explicitly loadable yet absent from canonical `skills_list()`, and therefore absent from SkillSense's snapshot (documentation correction).
+
+- Hardened text-only hot-path routing against multimodal input coercion, oversized-turn normalization and duplicate-name secondary hints (#39).
 
 - Verified public GitHub installation and exact-PR installation checks (#15, #18).
 - Guarded against stale or shadowed skill names and approved negative-intent mismatches (#19).
