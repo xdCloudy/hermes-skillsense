@@ -61,4 +61,36 @@ jobs:
 
           # The maintenance workflow must never rewrite the skill source.
           grep -q 'name: android-re' "$FIXTURE/SKILL.md"
+          # Verify the actual Hermes skill catalogue is captured, not merely
+          # that the plugin registered successfully.
+          NATIVE="$HERMES_HOME/skills/catalogue-smoke"
+          mkdir -p "$NATIVE"
+          cat > "$NATIVE/SKILL.md" <<'EOF'
+          ---
+          name: catalogue-smoke
+          description: Verify a native skill appears in local SkillSense routing
+          ---
+          # Catalogue smoke fixture
+          ## When to Use
+          Test Hermes native skill listing.
+          EOF
+          hermes skillrouter rebuild --root "$HERMES_HOME/skills" | grep -q "1 skills"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import sys
+          home=Path(os.environ["HERMES_HOME"])
+          snapshot=home/"plugin-data"/"skillsense"/"native-catalogue.json"
+          assert snapshot.exists(), "SkillSense did not persist Hermes native skill list"
+          info=json.loads(snapshot.read_text(encoding="utf-8"))
+          assert "catalogue-smoke" in info.get("skills",{}), info
+          sys.path.insert(0,str(home/"plugins"))
+          from skillsense.routing import hint, clear_cache
+          clear_cache()
+          suggestion=hint("use catalogue-smoke to verify local skill routing")
+          assert suggestion and "catalogue-smoke" in suggestion["context"], suggestion
+          print("Verified native catalogue capture and local routing hint.")
+          PY
+
           echo "SkillSense Hermes CLI smoke test passed."
