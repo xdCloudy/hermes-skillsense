@@ -56,3 +56,50 @@ class PluginTests(unittest.TestCase):
             finally:
                 if prior is None: os.environ.pop("HERMES_HOME",None)
                 else: os.environ["HERMES_HOME"]=prior
+
+    def test_doctor_is_read_only_without_catalogue(self):
+        with tempfile.TemporaryDirectory() as temp:
+            previous=os.environ.get("HERMES_HOME")
+            os.environ["HERMES_HOME"]=temp
+            try:
+                plugin=load_plugin()
+                message=plugin._diagnostics()
+                self.assertIn("index missing",message)
+                self.assertFalse((Path(temp)/"plugin-data"/"skillsense"/"data.db").exists())
+            finally:
+                if previous is None: os.environ.pop("HERMES_HOME",None)
+                else: os.environ["HERMES_HOME"]=previous
+
+    def test_doctor_catches_stale_native_catalogue(self):
+        with tempfile.TemporaryDirectory() as temp:
+            previous=os.environ.get("HERMES_HOME")
+            os.environ["HERMES_HOME"]=temp
+            try:
+                plugin=load_plugin()
+                from skillsense_test.store import save_native_snapshot, open_db, publish_index
+                conn=open_db()
+                try:
+                    publish_index(conn)
+                finally:
+                    conn.close()
+                self.assertIn("native skill catalogue missing",plugin._diagnostics())
+                save_native_snapshot({})
+                self.assertIn("routing will abstain",plugin._diagnostics())
+            finally:
+                if previous is None: os.environ.pop("HERMES_HOME",None)
+                else: os.environ["HERMES_HOME"]=previous
+
+    def test_enable_requires_index_even_with_native_settings(self):
+        import argparse
+        with tempfile.TemporaryDirectory() as temp:
+            previous=os.environ.get("HERMES_HOME")
+            os.environ["HERMES_HOME"]=temp
+            try:
+                plugin=load_plugin()
+                ctx=StubContext()
+                with self.assertRaisesRegex(ValueError,"rebuild"):
+                    plugin._configure(argparse.Namespace(action="enable"),ctx)
+                self.assertNotIn("enabled",ctx.settings)
+            finally:
+                if previous is None: os.environ.pop("HERMES_HOME",None)
+                else: os.environ["HERMES_HOME"]=previous
