@@ -24,7 +24,7 @@ hermes skillrouter clean --audit --model aux
 hermes skillrouter review list
 ```
 
-The CLI `enable`/`disable` commands use Hermes plugin settings when invoked through the host. Changing enablement generally requires restarting existing Hermes sessions. Explicit catalogue maintenance with `rebuild` or `refresh-native` should follow changes to installed/available skills.
+The CLI `enable` command refuses activation until both the published index and a non-empty, unexpired canonical native-skill snapshot exist. Run `refresh-native` if availability is missing or expired. Desktop configuration still relies on the normal-turn fail-closed check if manually enabled while the snapshot is unavailable. The CLI `enable`/`disable` commands use Hermes plugin settings when invoked through the host. Changing enablement generally requires restarting existing Hermes sessions. Explicit catalogue maintenance with `rebuild` or `refresh-native` should follow changes to installed/available skills.
 
 ## Canonical skill availability
 
