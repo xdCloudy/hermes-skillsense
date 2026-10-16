@@ -91,22 +91,29 @@ class Router:
         return "Potentially relevant installed skills (verify availability; open with skill_view if needed):\n" + "\n".join(names)
 
 _cache: Router | None = None
+_cache_refreshed = 0.0
+_CACHE_REFRESH_SECONDS = 60.0
 _lock = threading.Lock()
 _recent_lock = threading.Lock()
 _recent: dict[str, tuple[str,float]] = {}
 
 def get_router() -> Router:
-    global _cache
-    if _cache is None:
+    """Recheck index/snapshot once a minute; never trust expired eligibility forever."""
+    global _cache, _cache_refreshed
+    now = time.monotonic()
+    if _cache is None or now - _cache_refreshed >= _CACHE_REFRESH_SECONDS:
         with _lock:
-            if _cache is None:
+            now = time.monotonic()
+            if _cache is None or now - _cache_refreshed >= _CACHE_REFRESH_SECONDS:
                 _cache = Router(compose_native_records(read_index(), read_native_snapshot()))
+                _cache_refreshed = now
     return _cache
 
 def clear_cache() -> None:
-    global _cache
+    global _cache, _cache_refreshed
     with _lock:
         _cache = None
+        _cache_refreshed = 0.0
 
 def hint(user_message: str, max_suggestions: int = 2, session_id: str = "") -> dict | None:
     try:
