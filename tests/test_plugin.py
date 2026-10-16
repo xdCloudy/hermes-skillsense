@@ -132,3 +132,29 @@ class PluginTests(unittest.TestCase):
             finally:
                 if prior is None: os.environ.pop("HERMES_HOME",None)
                 else: os.environ["HERMES_HOME"]=prior
+
+    def test_status_reports_native_only_catalogue_and_stale_inactivity(self):
+        with tempfile.TemporaryDirectory() as temp:
+            previous=os.environ.get("HERMES_HOME")
+            os.environ["HERMES_HOME"]=temp
+            try:
+                plugin=load_plugin()
+                from skillsense_test.store import open_db, publish_index, save_native_snapshot
+                db=open_db()
+                try:
+                    publish_index(db)
+                finally:
+                    db.close()
+                save_native_snapshot({"plugin:svg":"Draw SVG diagrams"})
+                active=plugin._status(enabled_setting=True)
+                self.assertIn("0 skills in sidecar",active)
+                self.assertIn("1 native-available",active)
+                self.assertIn("routing enabled",active)
+                save_native_snapshot({})
+                stale=plugin._status(enabled_setting=True)
+                self.assertIn("0 native-available",stale)
+                self.assertIn("configured but inactive",stale)
+                self.assertIn("routing disabled",plugin._status(enabled_setting=False))
+            finally:
+                if previous is None: os.environ.pop("HERMES_HOME",None)
+                else: os.environ["HERMES_HOME"]=previous

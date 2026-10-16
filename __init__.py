@@ -14,18 +14,25 @@ def _root(args):
         [str(Path(os.environ.get("HERMES_HOME",str(Path.home()/".hermes"))) / "skills")])]
 
 def _status(enabled_setting: bool = False) -> str:
-    from .store import open_db, rows, data_dir
+    from .store import open_db, rows, data_dir, read_native_snapshot
     dbfile = data_dir() / "data.db"
     if not dbfile.is_file():
-        return "SkillSense: no catalogue yet. Run 'hermes skillrouter rebuild'."
+        return ("SkillSense: no catalogue yet. Run 'hermes skillrouter rebuild' "
+                "or 'hermes skillrouter refresh-native'.")
     conn = open_db()
     try:
         items = rows(conn)
         flags = {}
         for row in items:
             flags[row["status"]] = flags.get(row["status"],0)+1
+        native_count = len(read_native_snapshot())
         enabled = (data_dir()/"enabled.flag").exists() or enabled_setting
-        return f"SkillSense {__version__}: {len(items)} skills, {flags}, routing {'enabled' if enabled else 'disabled'}."
+        if enabled and not native_count:
+            state = "configured but inactive (native catalogue missing or expired)"
+        else:
+            state = "enabled" if enabled else "disabled"
+        return (f"SkillSense {__version__}: {len(items)} skills in sidecar, "
+                f"{native_count} native-available, {flags}, routing {state}.")
     finally:
         conn.close()
 
