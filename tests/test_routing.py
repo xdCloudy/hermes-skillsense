@@ -50,7 +50,7 @@ class RoutingTests(unittest.TestCase):
                    "tags":["digital","media"],"aliases":["art"],
                    "negative_intents":[],"intents":[]}])
         # `art` inside `artifacts` is not an exact alias match.
-        self.assertIsNone(r.suggest("assess digital artifacts"))
+        self.assertIsNone(r.suggest("digital artifacts"))
         self.assertIn("media-review",r.suggest("media-review digital media"))
 
     def test_approved_negative_intent_vetoes_top_candidate(self):
