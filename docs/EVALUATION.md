@@ -40,3 +40,16 @@ See [GitHub issue #8](https://github.com/xdCloudy/hermes-skillsense/issues/8). A
 7. No upload of raw private conversations, credentials or proprietary skill bodies.
 
 The synthetic fixtures should remain a **non-release-gating smoke suite**, unless a specific regression expectation is explicitly justified and documented.
+
+## Evaluate your own labelled dataset
+
+You can supply local JSON files without transmitting prompts or skills:
+
+```bash
+python tools/evaluate.py --catalogue ./catalogue.json --cases ./cases.json --json > results.json
+```
+
+Catalogue schema: `{"schema_version":1,"skills":[{"id":"a","name":"skill-name","description":"...","tags":[],"aliases":[],"intents":[]}]}`.
+Cases schema: `{"schema_version":1,"source":"dataset provenance","cases":[{"id":"case-1","prompt":"task","gold":["skill-name"]}]}`. Use `gold: []` for a task requiring no skill. All prompts are processed offline; output identifies case IDs and labels, not raw prompt text.
+
+The tool does not know whether your labels are correct or independent. Results should be reviewed before being used for release decisions.
