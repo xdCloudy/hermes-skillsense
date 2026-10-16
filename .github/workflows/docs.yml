@@ -1,0 +1,29 @@
+name: Documentation structure
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure bootstrap documents are present
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          required = [
+              "README.md", "GOAL.md", "SPEC.md", "ARCHITECTURE.md",
+              "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md", "ROADMAP.md",
+              "CODE_OF_CONDUCT.md", "CHANGELOG.md", "LICENSE",
+              "docs/METADATA_SCHEMA.md", "docs/INTEGRATION.md",
+              "docs/BENCHMARKS.md", "docs/BRANDING.md",
+              ".github/PULL_REQUEST_TEMPLATE.md",
+              "assets/skillsense-logo.png",
+          ]
+          missing = [p for p in required if not Path(p).is_file()]
+          if missing:
+              raise SystemExit(f"Missing expected repository files: {missing}")
+          print(f"OK: {len(required)} required files present")
+          PY

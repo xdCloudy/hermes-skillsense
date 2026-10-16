@@ -1,0 +1,30 @@
+name: Feature request
+description: Propose a capability or documented improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: Proposed solution
+      description: Explain runtime overhead, portability and local-only/privacy implications.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and trade-offs
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: Design principles
+      options:
+        - label: Does not require a model on the normal routing path.
+        - label: Does not modify SKILL.md files.
+        - label: Retains native Hermes fallback.

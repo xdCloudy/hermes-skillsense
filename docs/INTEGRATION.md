@@ -1,0 +1,44 @@
+# Hermes Integration Notes
+
+**Status: design only.** These integration surfaces must be verified against the target Hermes release as implementation begins.
+
+## Primary source
+
+[Official Hermes plugin development documentation](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins)
+
+## Relevant native APIs
+
+- General directory plugin: `plugin.yaml` plus a Python `register(ctx)` entry point.
+- `ctx.register_hook("pre_llm_call", callback)`: observers can return ephemeral `{"context": "..."}` or `None`; callback accepts `**kwargs`.
+- `ctx.register_cli_command(name=..., help=..., setup_fn=..., handler_fn=...)`: terminal subcommands.
+- `ctx.register_command("skillrouter", handler=..., description=...)`: in-session slash commands.
+- Manifest `config_schema`: native Desktop settings fields.
+- Host-owned per-profile `plugin_data_dir()` / `plugin_db()`: plugin durable storage.
+- Host-owned plugin LLM access for metadata generation; carefully check any privileged capabilities and provider routing.
+
+These are integration targets, **not** a claim of an installable plugin in this repository. Do not copy an unverified `register_auxiliary_task` or `complete_structured` call signature from a draft spec without checking current authoritative docs and host validation.
+
+## Packaging sequence
+
+1. Implement safe no-op `register(ctx)` with basic status commands.
+2. Add accurate `plugin.yaml` declarations; do not declare hooks or tools that aren't registered.
+3. Validate via `hermes plugins doctor . --ci`.
+4. Validate catalog compatibility via `hermes plugins validate .`.
+5. Test isolated `HERMES_HOME`, multiple profiles, runtime failures and uninstall/reinstall.
+6. Only then document `hermes plugins install xdCloudy/hermes-skillsense` as a working command.
+
+## Desktop UX limitation
+
+Manifest settings render standard fields; custom Scan/Clean/Review buttons require separately tested Desktop SDK support. Use CLI and slash commands for operations until that UI is implemented. Never assume arbitrary custom controls can be added by manifest alone.
+
+## Eligibility boundary
+
+A router hint must not claim a skill is available unless Hermes' own availability rules are verified. A fallback scanner may discover raw files but cannot on its own infer hidden host eligibility or trust decisions.
+
+## Local LLM boundary
+
+Host auxiliary routing may include remote providers and automatic fallbacks; before sending skill text check the resolved **effective** route and fallback handling. If proof is unavailable, block host-based enrichment and optionally use a separate explicit loopback-only transport with proxy and redirect restrictions.
+
+## Tests
+
+Hermes doctor with ephemeral home; callback context injection/no-op; invalid manifests; multiple plugins; profile changes; unavailable skill; transient model/network failures. Pin a tested minimum Hermes version only after integration tests pass.
