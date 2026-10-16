@@ -31,7 +31,8 @@ def _status(enabled_setting: bool = False) -> str:
 
 def _rebuild(args) -> str:
     from .catalog import scan_skills
-    from .store import open_db, sync, publish_index
+    from .store import open_db, sync, publish_index, save_native_snapshot
+    from .eligibility import native_skill_allowlist
     from .routing import clear_cache
     roots = _root(args)
     for root in roots:
@@ -43,6 +44,7 @@ def _rebuild(args) -> str:
     conn = open_db()
     try:
         result = sync(conn, skills, roots=roots)
+        save_native_snapshot(native_skill_allowlist())
         publish_index(conn)
     finally:
         conn.close()
@@ -52,7 +54,8 @@ def _rebuild(args) -> str:
 def _clean(args) -> str:
     from pathlib import Path
     from .catalog import scan_skills
-    from .store import open_db, sync, rows, stage, publish_index
+    from .store import open_db, sync, rows, stage, publish_index, save_native_snapshot
+    from .eligibility import native_skill_allowlist
     from .local_model import enrich, endpoint
     roots = _root(args)
     if any(not root.is_dir() for root in roots):
@@ -93,6 +96,7 @@ def _clean(args) -> str:
             except Exception:
                 counts["failed"] += 1
         publish_index(conn)
+        save_native_snapshot(native_skill_allowlist())
     finally:
         conn.close()
     return (f"Audit completed: {len(skills)} scanned, {counts['proposed']} pending review, "
