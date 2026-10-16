@@ -1,17 +1,17 @@
 # Metadata Clean — Technical Implementation Specification
 
-**Revision:** 1.0-draft · **Status:** design only
+**Revision:** 1.1 · **Status:** implementation-aware design specification; functional beta, not full feature parity. See [ROADMAP.md](ROADMAP.md) for release gates.
 
 ## 1. Decisions
 
 | Dimension | Selected |
 | --- | --- |
 | Scope | `audit`: inspect missing *and existing* metadata |
-| LLM | `aux`: configured Hermes auxiliary task |
+| LLM | Local OpenAI-compatible loopback endpoint for explicit audits; Hermes auxiliary task registration exists but is not the transport |
 | Storage | `sidecar`: never rewrite skill files |
-| Model locality | Strictly offline / verified loopback |
+| Model locality | Numeric HTTP loopback-only connection; local server forwarding behavior cannot be attested |
 | Trigger | User initiated, not normal conversation |
-| Approval | Review first; conservative auto-approval opt-in |
+| Approval | Manual approval required; no automatic approval shipped |
 | Runtime routing | BM25 and deterministic rules; no LLM |
 | Platforms | Windows, Linux, macOS |
 | Dependencies | Prefer standard library only |
@@ -56,28 +56,28 @@ Models may propose a compact retrieval-only description, tags, aliases, positive
 
 `unchanged`, `proposed`, `needs_review`, `approved`, `rejected`, `stale`, `failed`.
 
-Approval is field-granular and explicit by default. Rejected suggestions remain rejected across incremental audits unless explicitly reset.
+Current implementation approves or rejects a proposal as a whole, with no automatic approval or field-granular review. Rejected proposals remain skipped unless explicitly regenerated with `--force`.
 
 ## 5. LLM integration and locality
 
-Register a dedicated auxiliary task such as `skillrouter-tagger` using the **current documented host contract**. Prefer `ctx.llm.complete_structured(...)` when available and permitted, with explicit bounded context, schema, token cap and timeout. Revalidate output in the plugin itself.
+SkillSense registers the Hermes auxiliary task `skillrouter_tagger`, but **does not use host `ctx.llm` for model transport**: a host-configured auxiliary provider might fall back to the cloud. Instead, a manually triggered audit uses the explicit numeric loopback endpoint and locally served model ID. All model output undergoes independent proposal validation.
 
-**Fail closed:** resolving an automatic/cloud provider, being unable to disable remote fallback, or finding an unverifiable destination means do not send skill text. An adapter may instead use the user's explicitly configured loopback OpenAI-compatible endpoint with proxy bypass and redirect rejection. No bundled model, auto-download or cloud escape hatch.
+**Direct-transport restriction:** remote addresses, DNS hostnames, redirects and environment proxies are rejected/bypassed. A loopback endpoint may still point to a forwarding gateway, so operators must verify its server is genuinely offline. No bundled model, automatic download or built-in cloud fallback.
 
 Use strong untrusted-document framing. A model responding with commands, webhooks, instructions or off-schema fields causes a validation error. No raw skill content is logged by default.
 
-Suggested limits to tune: input excerpts capped at 12k characters, 768 output tokens, 45-second timeout, single concurrent auxiliary request. No enforced assumption that every model supports JSON Schema.
+Implemented limits: source excerpt ≤ 12,000 characters, output cap 768 tokens, 30-second per-request default timeout, sequential model requests and a default batch of ten calls (configurable 1–50). No enforced assumption that every model supports JSON Schema.
 
 ## 6. Sidecar schema & precedence
 
-Use Hermes-managed per-profile plugin data with versioned SQLite tables:
+Desired fully auditable schema (some tables remain future work):
 
 - `skills`: canonical key, source location, current content hash, scan time.
 - `metadata`: schema version, model/prompt origin, retrieval JSON, review state.
 - `audits`: run ID, scope, duration, counts, failures and timestamps.
 - `overrides`: explicit user-authored field values and rejection history.
 
-Source eligibility/platform/required tools are immutable. Precedence: native eligibility → user overrides → source metadata → approved enriched metadata → deterministic fallback. Enriched fields can expand **search vocabulary**, never permissions.
+Currently the primary `skills` table carries source identity, hash, metadata, review state and pending/approved JSON; atomic `index.json` and `native-catalogue.json` provide read-only snapshots. Separate audit-history/override/provenance tables are **not implemented**. Source eligibility/platform/required tools remain native Hermes decisions. Precedence: native eligibility → user overrides → source metadata → approved enriched metadata → deterministic fallback. Enriched fields can expand **search vocabulary**, never permissions.
 
 Cache key combines source hash + schema version + audit prompt version + model identity (with stable canonical encoding). Regenerate only when stale or forced; allow a full rescan without repeating every LLM call. SQLite schema changes require explicit migrations, validation and previous-good recovery. See [schema](docs/METADATA_SCHEMA.md).
 
@@ -95,23 +95,28 @@ A high BM25 score is *not* a calibrated probability. Weighting and abstention th
 
 No full skill bodies in prompt hints. Avoid modifying the system prompt; preserve cache prefix stability. Never load a skill automatically in the pre-LLM hook.
 
-## 8. Commands (proposed, not implemented)
+## 8. CLI commands: implemented vs planned
+
+**Implemented in v0.2.2 beta:**
 
 ```text
-hermes skillrouter status [--json]
-hermes skillrouter clean --audit [--dry-run] [--force] [--model aux]
-hermes skillrouter clean --audit --apply
-hermes skillrouter review [--skill ID]
-hermes skillrouter show SKILL
-hermes skillrouter rebuild
-hermes skillrouter benchmark [--dataset PATH]
+hermes skillrouter status
 hermes skillrouter doctor
-hermes skillrouter export [--format json]
+hermes skillrouter rebuild [--root DIRECTORY]
+hermes skillrouter refresh-native
+hermes skillrouter clean --audit --dry-run
+hermes skillrouter clean --audit --model aux --endpoint LOOPBACK_URL --model-id MODEL
+    [--max-inferences 10] [--offset 0] [--force]
+hermes skillrouter review list
+hermes skillrouter review approve SKILL_NAME_OR_ID
+hermes skillrouter review reject SKILL_NAME_OR_ID
+hermes skillrouter enable
+hermes skillrouter disable
 ```
 
-Slash command: `/skillrouter status|clean|review|show|doctor`. Slash-command maintenance must be safe against untrusted gateway users and may defer long jobs to a terminal.
+The slash-command form supports **read-only** `/skillrouter status`. Maintenance remains CLI-only to avoid unauthorised model or file operations from messaging gateways.
 
-Return predictable nonzero exit codes for invalid configuration, locality failure, partial audit, validation error and storage failure. Ctrl+C should leave completed commits intact and remaining work resumable.
+**Not implemented:** field-granular review, a dedicated `show` command, native `benchmark` subcommand (the offline CLI is `python tools/evaluate.py`), JSON exports, auto-approval, and a slash-command cleanup interface.
 
 ## 9. Desktop UX
 
