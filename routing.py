@@ -33,9 +33,12 @@ class Router:
                      for identity,r in self.records.items())
 
     def suggest(self, query: str, max_suggestions: int = 2) -> str | None:
-        if not query or not self.records:
+        # Hermes can provide multimodal turns as lists of content parts.
+        # Never stringify attachments or non-text objects for retrieval.
+        if not isinstance(query, str) or not query.strip() or not self.records:
             return None
-        query = clean_text(query, 1000)
+        # Bound work BEFORE Unicode normalization on arbitrarily large turns.
+        query = clean_text(query[:2000], 1000)
         ordered_tokens = tokenize(query)
         query_tokens = set(ordered_tokens)
         candidates = self.index.search(query, limit=6)
@@ -74,6 +77,7 @@ class Router:
                     break
                 r = self.records[c.skill_id]
                 if (r["name"] not in seen
+                    and self._name_counts[r["name"]] == 1
                     and len(set(tokenize(r["name"])) & query_tokens) >= 1
                     and not any(len(tokenize(negative)) >= 2
                                 and _phrase_in_tokens(negative, ordered_tokens)

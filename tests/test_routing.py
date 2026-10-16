@@ -70,3 +70,52 @@ class RoutingTests(unittest.TestCase):
                    "tags":["git","branch"],"aliases":[],
                    "negative_intents":["git"],"intents":[]}])
         self.assertIn("git-workflow",r.suggest("git-workflow branch management"))
+
+    def test_multimodal_and_nontext_user_turns_abstain(self):
+        from skillsense_test.routing import Router
+        router = Router([{"id":"a","name":"android-re",
+                          "description":"Decompile Android APK",
+                          "tags":["apk"],"aliases":[],"intents":[]}])
+        for message in (
+            [{"type":"text","text":"android-re decompile APK"},
+             {"type":"image_url","image_url":{"url":"data:image/png;base64,SECRET"}}],
+            {"text":"android-re decompile APK"},
+            b"android-re decompile APK", 123, None,
+        ):
+            with self.subTest(message_type=type(message).__name__):
+                self.assertIsNone(router.suggest(message))
+        self.assertIn("android-re",router.suggest("android-re decompile APK"))
+
+    def test_long_user_text_does_not_require_unbounded_normalization(self):
+        from unittest.mock import patch
+        import skillsense_test.routing as routing
+        router = routing.Router([{"id":"a","name":"android-re",
+                                 "description":"Decompile Android APK",
+                                 "tags":["apk"],"aliases":[],"intents":[]}])
+        original = routing.clean_text
+        lengths = []
+        def bounded(value, max_len=240):
+            lengths.append(len(value))
+            return original(value, max_len)
+        with patch.object(routing,"clean_text",side_effect=bounded):
+            result = router.suggest("android-re decompile APK " + "a"*250000)
+        self.assertIn("android-re",result)
+        self.assertLessEqual(max(lengths),2000)
+
+    def test_ambiguous_secondary_skill_never_leaks_into_hint(self):
+        from skillsense_test.routing import Router
+        router = Router([
+            {"id":"main","name":"apk-review",
+             "description":"apk review verify android app",
+             "tags":["apk","review"],"aliases":[],"intents":[]},
+            {"id":"first","name":"apk-tools",
+             "description":"apk review verify android app",
+             "tags":["apk"],"aliases":[],"intents":[]},
+            {"id":"second","name":"apk-tools",
+             "description":"apk review verify android app",
+             "tags":["apk"],"aliases":[],"intents":[]},
+        ])
+        hint = router.suggest("apk-review apk tools verify android app",3)
+        self.assertIsNotNone(hint)
+        self.assertIn("- apk-review",hint)
+        self.assertNotIn("- apk-tools",hint)
