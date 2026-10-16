@@ -15,7 +15,7 @@ A lightweight, local-first skill router for [Hermes Agent](https://github.com/No
 </div>
 
 > [!IMPORTANT]
-> **Project status: experimental implementation (v0.2.1), not certified production-ready.** The BM25 router, read-only skill scanner, SQLite sidecar, review commands and strictly local metadata-audit transport are implemented. They are **opt-in**; normal skill hints are disabled until enabled through the CLI. End-to-end testing against a real Hermes installation, skill-eligibility parity and a labelled evaluation set remain release blockers.
+> **Project status: experimental implementation (v0.2.1), not certified production-ready.** The BM25 router, read-only skill scanner, SQLite sidecar, review commands and strictly local metadata-audit transport are implemented. They are **opt-in**; normal skill hints are disabled until enabled through the CLI. An isolated real-Hermes installation has passed plugin doctor, validation, and CLI lifecycle smoke tests. **Native skill-eligibility parity and a held-out labelled selection-quality evaluation remain release blockers.**
 
 ## Why SkillSense?
 
@@ -71,7 +71,7 @@ Neither skill bodies nor generated metadata should be written back to third-part
 
 ## Performance goals (not certified)
 
-These are **targets, not achieved benchmark results**:
+These are **production targets**, not guaranteed end-to-end figures. The standalone BM25 implementation has been measured in GitHub Actions on Ubuntu/Python 3.12 using 500 synthetic skills and 2,000 queries: **p50 1.24 ms, p95 1.43 ms, p99 1.62 ms**. This does not include Hermes hook overhead or establish skill-selection accuracy.
 
 - p95 retrieval latency under **5 ms** for a catalogue of ~500 skills.
 - No GPU/VRAM usage, background service, or network request on the normal-turn path.
@@ -129,7 +129,7 @@ hermes plugins doctor . --ci
 hermes plugins validate .
 ```
 
-**Production gates:** real Hermes installation smoke tests, matching native skill eligibility/trust decisions, Windows/macOS/Linux CI, and independent labelled retrieval accuracy. Until those pass, treat routing as experimental.
+**Verification:** Native Hermes plugin doctor, validation, isolated CLI lifecycle and Windows/macOS/Linux Python CI have passed. **Remaining production gates:** native skill eligibility/trust parity ([issue #7](https://github.com/xdCloudy/hermes-skillsense/issues/7)) and a manually labelled retrieval-accuracy evaluation ([issue #8](https://github.com/xdCloudy/hermes-skillsense/issues/8)). Until those pass, treat routing as experimental.
 
 ## Documentation
 
