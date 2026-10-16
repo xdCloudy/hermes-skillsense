@@ -38,7 +38,7 @@ def _status(enabled_setting: bool = False) -> str:
 
 def _diagnostics() -> str:
     """Read-only operator health check. Never runs a model or alters skills."""
-    from .store import data_dir, read_index, read_native_snapshot
+    from .store import data_dir, read_index_status, read_native_snapshot
     from .eligibility import compose_native_records
     root = data_dir()
     index = root/"index.json"
@@ -46,7 +46,11 @@ def _diagnostics() -> str:
     if not index.is_file():
         return ("SkillSense: index missing. Run 'hermes skillrouter rebuild' "
                 "before enabling routing.")
-    indexed = read_index()
+    indexed, valid_index = read_index_status()
+    if not valid_index:
+        return ("SkillSense: index invalid or unreadable; approved enrichment "
+                "ignored. Verified native-only hints may still operate. "
+                "Run 'hermes skillrouter rebuild' to repair the sidecar index.")
     if not snapshot.is_file():
         return ("SkillSense: native skill catalogue missing. Run "
                 "'hermes skillrouter rebuild'; routing will abstain.")

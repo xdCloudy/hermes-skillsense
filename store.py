@@ -229,23 +229,27 @@ def _valid_index_skill(record: object) -> bool:
     return True
 
 
-def read_index(home: Path | None = None) -> list[dict]:
+def read_index_status(home: Path | None = None) -> tuple[list[dict], bool]:
     path = (Path(home) if home else data_dir()) / "index.json"
     try:
         if path.stat().st_size > 3_000_000:
-            return []
+            return [], False
         value = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(value, dict) or value.get("schema") != SCHEMA:
-            return []
+            return [], False
         records = value.get("skills")
         # Never accept a truncated catalogue: it could remove valid matches
         # while leaving stale enrichment for unexamined records.
         if (not isinstance(records, list) or len(records) > 2500
                 or not all(_valid_index_skill(record) for record in records)):
-            return []
+            return [], False
         identities = [record["id"] for record in records]
         if len(identities) != len(set(identities)):
-            return []
-        return records
+            return [], False
+        return records, True
     except (FileNotFoundError,OSError,ValueError,TypeError,AttributeError):
-        return []
+        return [], False
+
+def read_index(home: Path | None = None) -> list[dict]:
+    """Get verified index records, or no enrichment if unavailable/invalid."""
+    return read_index_status(home)[0]
