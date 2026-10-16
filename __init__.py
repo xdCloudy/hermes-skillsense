@@ -5,7 +5,7 @@ sent to a numeric loopback endpoint, with no redirects or proxy fallback.
 """
 from __future__ import annotations
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 def _root(args):
     from pathlib import Path
