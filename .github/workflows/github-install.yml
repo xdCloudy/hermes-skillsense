@@ -1,0 +1,42 @@
+name: Install from GitHub
+on:
+  push:
+    branches: [main]
+    paths:
+      - "__init__.py"
+      - "*.py"
+      - "plugin.yaml"
+      - ".github/workflows/github-install.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  install-from-public-repo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install isolated Hermes runtime
+        shell: bash
+        env:
+          HERMES_HOME: ${{ runner.temp }}/hermes-public-install
+          CI: "true"
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            https://hermes-agent.nousresearch.com/install.sh -o /tmp/hermes-install.sh
+          bash /tmp/hermes-install.sh --non-interactive --skip-browser --skip-computer-use
+      - name: Install and enable published SkillSense plugin
+        shell: bash
+        env:
+          HERMES_HOME: ${{ runner.temp }}/hermes-public-install
+          CI: "true"
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          hermes plugins install xdCloudy/hermes-skillsense --no-enable
+          hermes plugins enable skillsense
+          hermes skillrouter doctor
+          hermes skillrouter status
+          hermes plugins disable skillsense
+          echo "Public GitHub install, enable, diagnostics and disable succeeded."
