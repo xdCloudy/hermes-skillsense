@@ -40,3 +40,19 @@ class PluginTests(unittest.TestCase):
             finally:
                 if prior is None: os.environ.pop("HERMES_HOME",None)
                 else: os.environ["HERMES_HOME"]=prior
+
+    def test_bad_settings_fail_closed_without_breaking_registration(self):
+        with tempfile.TemporaryDirectory() as temp:
+            prior=os.environ.get("HERMES_HOME")
+            os.environ["HERMES_HOME"]=temp
+            try:
+                plugin=load_plugin()
+                ctx=StubContext()
+                ctx.settings={"enabled":"false","max_suggestions":"not a number"}
+                plugin.register(ctx)
+                self.assertIn("pre_llm_call",ctx.hooks)
+                self.assertIsNone(ctx.hooks["pre_llm_call"](user_message="android-re APK"))
+                self.assertIn("skillrouter",ctx.cli)
+            finally:
+                if prior is None: os.environ.pop("HERMES_HOME",None)
+                else: os.environ["HERMES_HOME"]=prior
