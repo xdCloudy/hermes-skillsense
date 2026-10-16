@@ -32,7 +32,7 @@ jobs:
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
           mkdir -p "$HERMES_HOME/plugins/skillsense"
-          cp plugin.yaml __init__.py core.py catalog.py store.py routing.py local_model.py "$HERMES_HOME/plugins/skillsense/"
+          cp plugin.yaml ./*.py "$HERMES_HOME/plugins/skillsense/"
           hermes plugins enable skillsense
 
           FIXTURE="$HERMES_HOME/smoke-skills/android-re"

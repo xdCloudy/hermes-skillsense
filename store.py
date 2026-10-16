@@ -113,7 +113,7 @@ def publish_index(conn: sqlite3.Connection, home: Path | None = None) -> int:
     for r in rows(conn):
         metadata = r["approved"] or {}
         payload.append({
-            "id":r["id"],"name":r["name"],
+            "id":r["id"],"name":r["name"],"source_description":r["description"],
             "description":metadata.get("description") or r["description"],
             "tags":list(r["tags"] or []) + list(metadata.get("tags", [])),
             "aliases":list(metadata.get("aliases",[])),

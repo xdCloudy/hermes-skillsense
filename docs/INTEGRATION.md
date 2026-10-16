@@ -42,3 +42,8 @@ Host auxiliary routing may include remote providers and automatic fallbacks; bef
 ## Tests
 
 Hermes doctor with ephemeral home; callback context injection/no-op; invalid manifests; multiple plugins; profile changes; unavailable skill; transient model/network failures. Pin a tested minimum Hermes version only after integration tests pass.
+## Native skill eligibility gate (experimental)
+
+At first router activation, SkillSense calls Hermes' `tools.skills_tool.skills_list()`, the same API Hermes uses for native listing. It explicitly rejects load names missing from the native list, duplicate names, and source-description mismatches. This covers Hermes' platform/environment/app/disabled gates and namespaced plugin listings without replicating their rules. If the listing fails, it injects **no hints**.
+
+**Trade-offs:** native eligibility is captured once per loaded router/session, so changes require a restart. Skills with no declared description cannot yet be safely matched to their filesystem source and are omitted from hints (but may still be audited). Individual project roots should be revalidated when changing working directory. This gate must not be mistaken for full session-specific availability parity.
