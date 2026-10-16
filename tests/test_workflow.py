@@ -70,6 +70,45 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn("Audit completed",result)
         self.assertEqual(read_native_snapshot(),available)
 
+    def test_stale_review_immediately_removes_old_approved_metadata(self):
+        from skillsense_test.store import open_db, rows, stage, publish_index, read_index
+        from skillsense_test.routing import clear_cache
+        # First publish a known approved alias and verify it reaches the index.
+        self.plugin._rebuild(argparse.Namespace(roots=None))
+        conn = open_db()
+        try:
+            original = rows(conn)[0]
+            self.assertTrue(stage(conn,original["id"],original["source_hash"],
+                                  {"description":"Inspect Android APK decompilation",
+                                   "aliases":["smoke test alias"]}))
+        finally:
+            conn.close()
+        self.assertIn("Approved",self.plugin._review(
+            argparse.Namespace(review_action="approve",skill="android-re")))
+        self.assertIn("smoke test alias",read_index()[0]["aliases"])
+        # Stage another revision before the underlying source changes.
+        conn = open_db()
+        try:
+            same = rows(conn)[0]
+            self.assertTrue(stage(conn,same["id"],same["source_hash"],
+                                  {"description":"Updated APK audit metadata"}))
+        finally:
+            conn.close()
+        source=self.skills/"SKILL.md"
+        source.write_text(source.read_text(encoding="utf-8")+"\\nChanged after audit.\\n",
+                          encoding="utf-8")
+        message=self.plugin._review(
+            argparse.Namespace(review_action="approve",skill="android-re"))
+        self.assertIn("stale",message)
+        self.assertEqual(read_index()[0]["aliases"],[])
+        conn=open_db()
+        try:
+            current=rows(conn)[0]
+            self.assertEqual(current["status"],"stale")
+            self.assertIsNone(current["approved"])
+        finally:
+            conn.close()
+
     def test_malicious_remote_url_fails_before_scan(self):
         from skillsense_test.local_model import LocalOnlyError
         with self.assertRaises(LocalOnlyError):
