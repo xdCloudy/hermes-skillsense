@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 import threading
 from .core import BM25Index, Document, tokenize
+import hashlib
+import time
 from .catalog import clean_text
 from .store import read_index
 
@@ -56,13 +58,15 @@ class Router:
         for c in selected[:count]:
             r = self.records[c.skill_id]
             title = clean_text(r["name"], 65)
-            purpose = clean_text(r.get("description",""), 95)
-            # Only catalogue names, never skill instruction bodies.
-            names.append("- " + title + (": " + purpose if purpose else ""))
+            terms = sorted(set(tokenize(" ".join([r.get("description","")] + list(r.get("tags") or [])))) & query_tokens)[:3]
+            # Never inject untrusted skill descriptions or instructions directly.
+            names.append("- " + title + (" (matched: " + ", ".join(terms) + ")" if terms else ""))
         return "Potentially relevant installed skills (verify availability; open with skill_view if needed):\n" + "\n".join(names)
 
 _cache: Router | None = None
 _lock = threading.Lock()
+_recent_lock = threading.Lock()
+_recent: dict[str, tuple[str,float]] = {}
 
 def get_router() -> Router:
     global _cache
@@ -77,10 +81,22 @@ def clear_cache() -> None:
     with _lock:
         _cache = None
 
-def hint(user_message: str, max_suggestions: int = 2) -> dict | None:
+def hint(user_message: str, max_suggestions: int = 2, session_id: str = "") -> dict | None:
     try:
         value = get_router().suggest(user_message, max_suggestions)
-        return {"context":value} if value else None
+        if not value:
+            return None
+        if session_id:
+            fingerprint = hashlib.sha256(value.encode("utf-8")).hexdigest()
+            now = time.monotonic()
+            with _recent_lock:
+                old = _recent.get(str(session_id))
+                if old and old[0] == fingerprint and now - old[1] < 300:
+                    return None
+                if len(_recent) >= 256:
+                    _recent.clear()
+                _recent[str(session_id)] = (fingerprint, now)
+        return {"context": value}
     except Exception:
         # A broken cache must never fail a Hermes turn.
         return None

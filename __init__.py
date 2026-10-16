@@ -198,8 +198,8 @@ def register(ctx):
     from .routing import hint
     from .store import data_dir
     active = (data_dir()/"enabled.flag").exists()
-    def on_turn(user_message="",**kwargs):
-        return hint(user_message) if active else None
+    def on_turn(user_message="",session_id="",**kwargs):
+        return hint(user_message,session_id=session_id) if active else None
     ctx.register_hook("pre_llm_call",on_turn)
     ctx.register_cli_command(name="skillrouter",help="SkillSense local skill router",
                              setup_fn=_setup,handler_fn=_cli)
