@@ -52,7 +52,10 @@ class WorkflowTests(unittest.TestCase):
             argparse.Namespace(review_action="approve",skill="android-re")))
         self.assertIn("enabled",self.plugin._configure(argparse.Namespace(action="enable")))
         clear_cache()
-        self.assertIn("android-re",hint("decompile an Android APK with jadx")["context"])
+        from unittest.mock import patch
+        with patch("skillsense_test.routing.native_skill_allowlist",
+                   return_value={"android-re":"Inspect Android APK decompilation"}):
+            self.assertIn("android-re",hint("decompile an Android APK with jadx")["context"])
         self.assertIn("disabled",self.plugin._configure(argparse.Namespace(action="disable")))
 
     def test_malicious_remote_url_fails_before_scan(self):
