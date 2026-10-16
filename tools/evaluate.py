@@ -59,7 +59,9 @@ def evaluate(catalogue: list[dict], cases: list[dict], variant: str) -> dict:
     errors = []
     for case in cases:
         start = time.perf_counter_ns()
-        suggested = parse_names(router.suggest(case["prompt"]))
+        # Compute true @3 retrieval with three permitted suggestions, not the
+        # normal-turn default limit of two. Conservative gating may emit fewer.
+        suggested = parse_names(router.suggest(case["prompt"], max_suggestions=3))
         times.append((time.perf_counter_ns() - start) / 1e6)
         expected = set(case["gold"])
         relevant_ids += len(expected)

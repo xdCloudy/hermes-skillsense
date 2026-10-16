@@ -125,3 +125,24 @@ class RoutingTests(unittest.TestCase):
         self.assertIsNotNone(hint)
         self.assertIn("- apk-review",hint)
         self.assertNotIn("- apk-tools",hint)
+
+    def test_max_suggestions_three_can_return_three_evidenced_skills(self):
+        from unittest.mock import patch
+        from skillsense_test.core import Match
+        from skillsense_test.routing import Router
+        docs = [
+            {"id": name, "name": name, "description": "Process workflow tasks",
+             "tags": ["process", "workflow"], "aliases": [], "intents": []}
+            for name in ("alpha-tool", "beta-tool", "gamma-tool")
+        ]
+        router = Router(docs)
+        ordered = [Match("alpha-tool", 10.0), Match("beta-tool", 9.3),
+                   Match("gamma-tool", 9.0)]
+        prompt = "alpha-tool beta-tool gamma-tool process workflow"
+        with patch.object(router.index, "search", return_value=ordered):
+            three = router.suggest(prompt, max_suggestions=3)
+            default = router.suggest(prompt)
+        self.assertEqual(sum(line.startswith("- ") for line in three.splitlines()), 3)
+        self.assertEqual(sum(line.startswith("- ") for line in default.splitlines()), 2)
+        self.assertIn("- gamma-tool", three)
+        self.assertNotIn("- gamma-tool", default)
