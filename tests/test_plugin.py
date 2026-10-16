@@ -103,3 +103,32 @@ class PluginTests(unittest.TestCase):
             finally:
                 if previous is None: os.environ.pop("HERMES_HOME",None)
                 else: os.environ["HERMES_HOME"]=previous
+
+    def test_enable_requires_live_native_snapshot_and_accepts_valid_one(self):
+        import argparse
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            prior=os.environ.get("HERMES_HOME")
+            os.environ["HERMES_HOME"]=temp
+            try:
+                plugin=load_plugin()
+                from skillsense_test.store import save_native_snapshot, open_db, publish_index
+                conn=open_db()
+                try:
+                    publish_index(conn)
+                finally:
+                    conn.close()
+                ctx=StubContext()
+                with self.assertRaisesRegex(ValueError,"availability missing"):
+                    plugin._configure(argparse.Namespace(action="enable"),ctx)
+                self.assertNotIn("enabled",ctx.settings)
+                save_native_snapshot({"native-skill":"Installed native skill"})
+                self.assertIn("enabled",plugin._configure(
+                    argparse.Namespace(action="enable"),ctx))
+                self.assertIs(ctx.settings["enabled"],True)
+                self.assertIn("disabled",plugin._configure(
+                    argparse.Namespace(action="disable"),ctx))
+                self.assertIs(ctx.settings["enabled"],False)
+            finally:
+                if prior is None: os.environ.pop("HERMES_HOME",None)
+                else: os.environ["HERMES_HOME"]=prior

@@ -209,8 +209,13 @@ def _configure(args, ctx=None) -> str:
     root = data_dir()
     root.mkdir(parents=True,exist_ok=True)
     flag = root/"enabled.flag"
-    if args.action == "enable" and not (root/"index.json").is_file():
-        raise ValueError("Run 'hermes skillrouter rebuild' before enabling routing")
+    if args.action == "enable":
+        if not (root/"index.json").is_file():
+            raise ValueError("Run 'hermes skillrouter rebuild' or 'refresh-native' before enabling routing")
+        from .store import read_native_snapshot
+        if not read_native_snapshot():
+            raise ValueError("Native skill availability missing or expired; run "
+                             "'hermes skillrouter refresh-native' before enabling routing")
     if ctx is not None and hasattr(ctx,"set_config"):
         ctx.set_config("enabled", args.action == "enable")
         flag.unlink(missing_ok=True)
