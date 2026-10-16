@@ -96,17 +96,18 @@ def decide(conn: sqlite3.Connection, identity: str, approve: bool) -> bool:
         row = conn.execute("SELECT pending,path,source_hash FROM skills WHERE id=?", (identity,)).fetchone()
         if row is None or not row["pending"]:
             return False
+        # Either decision may affect an existing approved proposal. If the
+        # source changed, revoke stale enrichment before *approval or rejection*.
+        try:
+            data = Path(row["path"]).read_text(encoding="utf-8")
+            current_hash = hashlib.sha256(data.encode("utf-8")).hexdigest()
+        except (OSError, UnicodeError, ValueError):
+            current_hash = None
+        if current_hash != row["source_hash"]:
+            conn.execute("UPDATE skills SET approved=NULL,pending=NULL,status='stale' WHERE id=?",
+                         (identity,))
+            return False
         if approve:
-            # Do not approve metadata for a file changed after an audit.
-            try:
-                data = Path(row["path"]).read_text(encoding="utf-8")
-                current_hash = hashlib.sha256(data.encode("utf-8")).hexdigest()
-            except (OSError, ValueError):
-                current_hash = None
-            if current_hash != row["source_hash"]:
-                conn.execute("UPDATE skills SET approved=NULL,pending=NULL,status='stale' WHERE id=?",
-                             (identity,))
-                return False
             conn.execute("UPDATE skills SET approved=pending,pending=NULL,status='approved' WHERE id=?",
                          (identity,))
         else:
