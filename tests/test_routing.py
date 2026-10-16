@@ -115,7 +115,13 @@ class RoutingTests(unittest.TestCase):
              "description":"apk review verify android app",
              "tags":["apk"],"aliases":[],"intents":[]},
         ])
-        hint = router.suggest("apk-review apk tools verify android app",3)
+        from unittest.mock import patch
+        from skillsense_test.core import Match
+        # Test secondary candidate eligibility independently of BM25 weights.
+        # The top candidate is unambiguous, while both trailing IDs share a name.
+        candidates = [Match("main",10.0),Match("first",9.0),Match("second",8.0)]
+        with patch.object(router.index,"search",return_value=candidates):
+            hint = router.suggest("apk-review apk tools verify android app",3)
         self.assertIsNotNone(hint)
         self.assertIn("- apk-review",hint)
         self.assertNotIn("- apk-tools",hint)
