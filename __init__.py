@@ -90,7 +90,7 @@ def _clean(args) -> str:
                     continue
                 proposal = enrich(raw[:12000],args.model_id,args.endpoint)
                 counts["proposed"] += int(stage(conn,s.identity,s.sha256,proposal))
-            except (OSError,ValueError,KeyError,TypeError,TimeoutError) as exc:
+            except Exception:
                 counts["failed"] += 1
         publish_index(conn)
     finally:
@@ -121,7 +121,7 @@ def _review(args) -> str:
             return "No pending proposal for that skill."
         publish_index(conn)
         clear_cache()
-        return f"{action.capitalize()}d proposal for {matches[0]['name']}."
+        return f"{'Approved' if action == 'approve' else 'Rejected'} proposal for {matches[0]['name']}."
     finally:
         conn.close()
 

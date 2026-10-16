@@ -98,7 +98,7 @@ def scan_skills(roots: list[Path]) -> list[Skill]:
                 continue  # Can't safely infer Hermes availability requirements.
             rel = path.parent.relative_to(root).as_posix()
             identity = f"{root.as_posix()}::{rel}"
-            tags = tuple(clean_text(str(t), 40).lower() for t in metadata["tags"]
+            tags = tuple(clean_text(str(t), 40).lower() for t in metadata.get("tags",[])
                          if clean_text(str(t), 40))[:12]
             trigger = _activation(instructions)
             found[identity] = Skill(identity, name,
