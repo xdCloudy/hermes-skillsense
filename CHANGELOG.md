@@ -14,7 +14,8 @@ All notable project changes will be documented here. Release entries will follow
 - Added best-effort masking of obvious credential strings before optional metadata inference (#26).
 - Streamlined pull-request CI while retaining the full scheduled/manual cross-platform matrix (#27).
 - Immediately republished the index when an attempted metadata approval invalidates stale enrichment (#28).
-- Operator diagnostics and conditional frontmatter parsing changes are tracked in open PRs; they are not claimed as merged here.
+- Added read-only operator diagnostics, actionable catalogue health reporting and safe enablement checks (#22).
+- Conservatively excluded conditional block-form YAML sources from sidecar enrichment (#29).
 
 
 ### v0.2.2 — candidate (not a stable release)
