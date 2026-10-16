@@ -121,3 +121,21 @@ class CatalogueTests(unittest.TestCase):
             with patch("skillsense_test.catalog.os.walk",side_effect=failing_walk):
                 with self.assertRaisesRegex(OSError,"incomplete"):
                     scan_skills([root])
+
+    def test_block_form_platforms_are_conservatively_excluded(self):
+        from skillsense_test.catalog import scan_skills
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            for idx,header in enumerate((
+                "platforms:\\n  - linux",
+                "requires:\\n  bins: [docker]",
+                "environments:\\n  - kanban",
+                "requires_apps:\\n  - github",
+                "metadata:\\n  hermes:\\n    requires_toolsets: [kanban]"
+            )):
+                item=root/f"restricted-{idx}"
+                item.mkdir()
+                (item/"SKILL.md").write_text(
+                    "---\\nname: conditional-skill\\ndescription: Conditional skill\\n"
+                    +header+"\\n---\\n# Restricted",encoding="utf-8")
+            self.assertEqual(scan_skills([root]),[])
