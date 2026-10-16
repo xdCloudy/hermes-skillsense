@@ -15,7 +15,7 @@ python tools/evaluate.py --json
 
 Data: `benchmarks/selection-catalogue-v1.json` and `benchmarks/selection-cases-v1.json`.
 
-`names` indexes names only, `source` adds skill descriptions/tags, and `enriched` also indexes example aliases/intents. All three use the same BM25 implementation, decision gate and requests.
+`names` indexes names only, `source` adds skill descriptions/tags, and `enriched` also uses approved aliases, positive intents and negative-intent vetoes. Only the enriched variant applies negative-intent exclusions, so baseline comparisons remain meaningful. All three use the same BM25 implementation and task requests.
 
 ## Metrics
 
@@ -56,3 +56,36 @@ Catalogue schema: `{"schema_version":1,"skills":[{"id":"a","name":"skill-name","
 Cases schema: `{"schema_version":1,"source":"dataset provenance","cases":[{"id":"case-1","prompt":"task","gold":["skill-name"]}]}`. Use `gold: []` for a task requiring no skill. All prompts are processed offline; output identifies case IDs and labels, not raw prompt text.
 
 The tool does not know whether your labels are correct or independent. Results should be reviewed before being used for release decisions.
+
+## Export your actual installed catalogue (local only)
+
+From a Hermes profile where you have already run `hermes skillrouter rebuild` or
+`hermes skillrouter refresh-native`, export the skills eligible under the most
+recent local native snapshot:
+
+```bash
+python tools/export_catalogue.py \
+  --data-dir ~/.hermes/plugin-data/skillsense \
+  --output ./my-local-catalogue.json
+```
+
+The exporter refuses missing or expired native snapshots, and refuses to
+overwrite an existing output. It uses the same conservative native/sidecar
+matching code as routing, with no model, browser or network calls.
+
+**Privacy:** The resulting file can contain private skill names, descriptions
+and approved aliases. Nothing is uploaded automatically. Inspect the JSON
+before sharing it with reviewers or committing it to a public repository.
+No prompt histories or user tasks are included.
+
+Pair the export with a *separately created* case file whose `gold` labels
+have been manually reviewed. Do not use the router's own predictions as labels:
+
+```bash
+python tools/evaluate.py \
+  --catalogue ./my-local-catalogue.json \
+  --cases ./my-held-out-cases.json --json
+```
+
+This export is infrastructure to make issue #8 easier to evaluate; it does
+not itself satisfy the held-out accuracy release gate.

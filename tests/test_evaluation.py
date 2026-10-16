@@ -91,3 +91,31 @@ class EvaluationCLITests(unittest.TestCase):
             fpr_low,fpr_high=report["wilson_95"]["no_skill_false_positive_rate"]
             self.assertEqual(fpr_low,0.0)
             self.assertGreater(fpr_high,0.75)
+
+    def test_negative_intents_apply_only_to_enriched_variant(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            catalogue=root/"catalogue.json"
+            cases=root/"cases.json"
+            catalogue.write_text(json.dumps({
+                "schema_version":1,
+                "skills":[{
+                    "id":"a","name":"apk-review",
+                    "description":"Create Android APK apps",
+                    "tags":["android","apk"],"aliases":[],"intents":[],
+                    "negative_intents":["create an Android APK"]
+                }]
+            }),encoding="utf-8")
+            cases.write_text(json.dumps({
+                "schema_version":1,"source":"synthetic-regression",
+                "cases":[{"id":"negative","prompt":"create an Android APK","gold":[]}]
+            }),encoding="utf-8")
+            run=subprocess.run([
+                sys.executable,str(ROOT/"tools"/"evaluate.py"),"--json",
+                "--catalogue",str(catalogue),"--cases",str(cases)
+            ],capture_output=True,text=True,timeout=20)
+            self.assertEqual(run.returncode,0,run.stderr)
+            scores={item["variant"]:item["no_skill_false_positive_rate"]
+                    for item in json.loads(run.stdout)["results"]}
+            self.assertEqual(scores["source"],1.0)
+            self.assertEqual(scores["enriched"],0.0)
