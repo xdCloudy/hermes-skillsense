@@ -47,3 +47,21 @@ class EligibilityTests(unittest.TestCase):
     def test_no_fail_open_when_catalog_missing(self):
         from skillsense_test.eligibility import filter_index_to_native
         self.assertEqual(filter_index_to_native([{"name":"anything"}],{}),[])
+
+    def test_native_only_plugin_skill_is_searchable(self):
+        from skillsense_test.eligibility import compose_native_records
+        from skillsense_test.routing import Router
+        names={"example:diagram":"Create SVG diagrams for architecture plans"}
+        router=Router(compose_native_records([],names))
+        self.assertIn("example:diagram",router.suggest("create SVG diagrams"))
+
+    def test_shadowed_source_gets_native_description_not_stale_enrichment(self):
+        from skillsense_test.eligibility import compose_native_records
+        rows=[{"id":"stale","name":"android-re","description":"Never do work",
+               "source_description":"Old skill description",
+               "tags":["irrelevant"],"aliases":["wrong"],"intents":[]}]
+        out=compose_native_records(rows,{"android-re":"Decompile Android APK archives"})
+        self.assertEqual(len(out),1)
+        self.assertEqual(out[0]["description"],"Decompile Android APK archives")
+        self.assertEqual(out[0]["tags"],[])
+        self.assertEqual(out[0]["id"],"native::android-re")
