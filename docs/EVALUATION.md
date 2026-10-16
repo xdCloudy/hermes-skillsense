@@ -90,3 +90,14 @@ python tools/evaluate.py \
 
 This export is infrastructure to make issue #8 easier to evaluate; it does
 not itself satisfy the held-out accuracy release gate.
+
+## Dataset validation
+
+The evaluator rejects duplicate skill names or IDs, malformed metadata arrays,
+unlabelled/duplicate tasks, duplicate or unknown gold labels and unsupported
+schemas before reporting accuracy. Labels identify unique canonical load names,
+not potentially ambiguous project-shadowed display names. A dataset that
+contains same-name skills requires separately resolved session eligibility
+before it can be scored reliably; this evaluator does not claim to test native
+session/project precedence. This prevents silent metric distortion but does
+not verify that human labels are independently correct.

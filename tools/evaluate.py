@@ -104,6 +104,68 @@ def evaluate(catalogue: list[dict], cases: list[dict], variant: str) -> dict:
     }
 
 
+
+def validate_fixtures(catalogue: object, fixture: object) -> tuple[list[dict], list[dict]]:
+    """Reject malformed or ambiguous labels before reporting selection accuracy."""
+    if (not isinstance(catalogue, dict) or not isinstance(fixture, dict)
+            or type(catalogue.get("schema_version")) is not int
+            or type(fixture.get("schema_version")) is not int
+            or catalogue["schema_version"] != 1 or fixture["schema_version"] != 1):
+        raise ValueError("unsupported fixture schema")
+    skills, cases = catalogue.get("skills"), fixture.get("cases")
+    if not isinstance(skills, list) or not isinstance(cases, list):
+        raise ValueError("fixture skills and cases must be lists")
+    provenance = fixture.get("source")
+    if not isinstance(provenance, str) or not provenance.strip() or len(provenance) > 500:
+        raise ValueError("invalid dataset provenance")
+    if len(skills) > 10000 or len(cases) > 10000:
+        raise ValueError("fixture exceeds 10000 skill/case limit")
+
+    names, identities = set(), set()
+    for skill in skills:
+        if not isinstance(skill, dict):
+            raise ValueError("invalid skill record")
+        name, identity = skill.get("name"), skill.get("id")
+        if (not isinstance(name, str) or not name.strip() or len(name) > 200
+                or not isinstance(identity, str) or not identity.strip()
+                or len(identity) > 1000):
+            raise ValueError("invalid skill name or ID")
+        if name in names or identity in identities:
+            raise ValueError("duplicate skill name or ID; labels must be unambiguous")
+        names.add(name)
+        identities.add(identity)
+        description = skill.get("description", "")
+        if not isinstance(description, str) or len(description) > 20000:
+            raise ValueError("invalid skill metadata")
+        for field in ("tags", "aliases", "intents", "negative_intents"):
+            values = skill.get(field, [])
+            if (not isinstance(values, list) or len(values) > 100
+                    or any(not isinstance(value, str) or len(value) > 1000
+                           for value in values)):
+                raise ValueError("invalid skill metadata")
+
+    if not cases:
+        raise ValueError("no cases or duplicate case IDs")
+    seen_cases = set()
+    for case in cases:
+        if not isinstance(case, dict):
+            raise ValueError("invalid case prompt or identifier")
+        prompt, case_id = case.get("prompt"), case.get("id")
+        if (not isinstance(prompt, str) or not prompt.strip() or len(prompt) > 4000
+                or not isinstance(case_id, str) or not case_id.strip()
+                or len(case_id) > 120):
+            raise ValueError("invalid case prompt or identifier")
+        if case_id in seen_cases:
+            raise ValueError("no cases or duplicate case IDs")
+        seen_cases.add(case_id)
+        gold = case.get("gold")
+        if (not isinstance(gold, list)
+                or any(not isinstance(value, str) or not value for value in gold)
+                or len(set(gold)) != len(gold) or not set(gold).issubset(names)):
+            raise ValueError("missing or unknown ground truth IDs")
+    return skills, cases
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--json",action="store_true",help="Machine-readable output")
@@ -114,21 +176,8 @@ def main() -> int:
     args = parser.parse_args()
     cat = json.loads(args.catalogue.read_text(encoding="utf-8"))
     fixture = json.loads(args.cases.read_text(encoding="utf-8"))
-    cases = fixture["cases"]
-    if cat.get("schema_version") != 1 or fixture.get("schema_version") != 1:
-        raise ValueError("unsupported fixture schema")
-    if not isinstance(cat.get("skills"),list) or not isinstance(fixture.get("cases"),list):
-        raise ValueError("fixture skills and cases must be lists")
-    known = {r["name"] for r in cat["skills"]}
-    if not cases or len({case["id"] for case in cases}) != len(cases):
-        raise ValueError("no cases or duplicate case IDs")
-    if any(not isinstance(c.get("gold"),list) or not set(c["gold"]).issubset(known)
-           for c in cases):
-        raise ValueError("missing or unknown ground truth IDs")
-    if any(not isinstance(c.get("prompt"),str) or not isinstance(c.get("id"),str)
-           or len(c["prompt"]) > 4000 or len(c["id"]) > 120 for c in cases):
-        raise ValueError("invalid case prompt or identifier")
-    reports = [evaluate(cat["skills"],cases,variant) for variant in ("names","source","enriched")]
+    skills, cases = validate_fixtures(cat, fixture)
+    reports = [evaluate(skills, cases, variant) for variant in ("names","source","enriched")]
     if args.json:
         print(json.dumps({"dataset":fixture["source"],"results":reports},indent=2))
     else:

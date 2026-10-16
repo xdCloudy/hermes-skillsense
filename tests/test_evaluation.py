@@ -119,3 +119,50 @@ class EvaluationCLITests(unittest.TestCase):
                     for item in json.loads(run.stdout)["results"]}
             self.assertEqual(scores["source"],1.0)
             self.assertEqual(scores["enriched"],0.0)
+
+
+    def test_reject_duplicate_catalogue_names_and_identifiers(self):
+        base = {"schema_version": 1, "source": "validation regression",
+                "cases": [{"id": "case-1", "prompt": "sample prompt", "gold": []}]}
+        variants = [
+            [{"id": "a", "name": "same"}, {"id": "b", "name": "same"}],
+            [{"id": "a", "name": "first"}, {"id": "a", "name": "second"}],
+        ]
+        for skills in variants:
+            with self.subTest(skills=skills), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                cat, cases = root / "catalogue.json", root / "cases.json"
+                cat.write_text(json.dumps({"schema_version": 1, "skills": skills}),
+                               encoding="utf-8")
+                cases.write_text(json.dumps(base), encoding="utf-8")
+                run = subprocess.run([sys.executable, str(ROOT / "tools" / "evaluate.py"),
+                                      "--catalogue", str(cat), "--cases", str(cases)],
+                                     text=True, capture_output=True, timeout=20)
+                self.assertNotEqual(run.returncode, 0)
+                self.assertIn("duplicate skill name or ID", run.stderr)
+
+    def test_reject_bad_metadata_and_duplicate_or_unhashable_labels(self):
+        base_skill = {"id": "a", "name": "android-re", "description": "APK review"}
+        cases = {"schema_version": 1, "source": "validation regression",
+                 "cases": [{"id": "case-1", "prompt": "review apk", "gold": ["android-re"]}]}
+        variants = [
+            (dict(base_skill, tags="android"), cases, "invalid skill metadata"),
+            (base_skill, dict(cases, cases=[dict(cases["cases"][0],
+                                               gold=["android-re", "android-re"])]),
+             "missing or unknown ground truth IDs"),
+            (base_skill, dict(cases, cases=[dict(cases["cases"][0],
+                                               gold=[["android-re"]])]),
+             "missing or unknown ground truth IDs"),
+        ]
+        for skill, tasks, expected_error in variants:
+            with self.subTest(expected_error=expected_error, skill=skill, tasks=tasks), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                cat, path = root / "catalogue.json", root / "cases.json"
+                cat.write_text(json.dumps({"schema_version": 1, "skills": [skill]}),
+                               encoding="utf-8")
+                path.write_text(json.dumps(tasks), encoding="utf-8")
+                run = subprocess.run([sys.executable, str(ROOT / "tools" / "evaluate.py"),
+                                      "--catalogue", str(cat), "--cases", str(path)],
+                                     text=True, capture_output=True, timeout=20)
+                self.assertNotEqual(run.returncode, 0)
+                self.assertIn(expected_error, run.stderr)
