@@ -51,6 +51,29 @@ def _rebuild(args) -> str:
     clear_cache()
     return f"Rebuilt index: {result['total']} skills ({result['added']} new; {result['changed']} changed)."
 
+def _refresh_native() -> str:
+    """Refresh canonical skill availability without scanning or changing SKILL.md.
+
+    Supports installations providing only native/plugin skills and permits an
+    explicit cheap refresh after installing new skills or changing profiles.
+    """
+    from .eligibility import native_skill_allowlist
+    from .store import open_db, save_native_snapshot, publish_index
+    from .routing import clear_cache
+    available = native_skill_allowlist()
+    if not available:
+        raise RuntimeError("No native skills available or Hermes catalogue unavailable; "
+                           "existing snapshot preserved")
+    conn = open_db()
+    try:
+        # Keep all approved sidecar metadata and avoid root-scoped deletions.
+        publish_index(conn)
+        save_native_snapshot(available)
+    finally:
+        conn.close()
+    clear_cache()
+    return f"Refreshed native availability for {len(available)} skills without scanning sources."
+
 def _clean(args) -> str:
     from pathlib import Path
     from .catalog import scan_skills
@@ -156,6 +179,8 @@ def _cli(args, ctx=None):
             print(_status(enabled_setting))
         elif command == "rebuild":
             print(_rebuild(args))
+        elif command == "refresh-native":
+            print(_refresh_native())
         elif command == "clean":
             if ctx is not None:
                 args.endpoint = getattr(args,"endpoint",None) or ctx.get_config("local_endpoint",default="")
@@ -171,7 +196,7 @@ def _cli(args, ctx=None):
             print(f"SkillSense {__version__}: data at {data_dir()}; native registration active.")
             print("Verify host with: hermes plugins doctor . --ci; hermes plugins validate .")
         else:
-            print("Use: hermes skillrouter status|rebuild|clean|review|enable|disable|doctor")
+            print("Use: hermes skillrouter status|rebuild|refresh-native|clean|review|enable|disable|doctor")
     except Exception as exc:
         # Local operator CLI may display an actionable error; avoid skill body output.
         print(f"SkillSense error: {type(exc).__name__}: {exc}")
@@ -180,6 +205,7 @@ def _cli(args, ctx=None):
 def _setup(parser):
     sub = parser.add_subparsers(dest="skillsense_command")
     sub.add_parser("status",help="Show approved/pending skill state")
+    sub.add_parser("refresh-native",help="Refresh canonical availability without scanning skill files")
     for name in ("rebuild","clean"):
         cmd = sub.add_parser(name,help="Read-only scan of trusted skill roots")
         cmd.add_argument("--root",dest="roots",action="append",help="Trusted skills directory")
