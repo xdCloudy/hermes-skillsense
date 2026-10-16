@@ -1,0 +1,67 @@
+"""Portable native catalogue snapshot: plugin host needs no Hermes imports."""
+import json
+import sys
+import tempfile
+import time
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+from test_catalog import module
+
+class NativeSnapshotTests(unittest.TestCase):
+    def setUp(self):
+        module()
+
+    def test_local_snapshot_round_trip_and_expiry(self):
+        from skillsense_test.store import save_native_snapshot, read_native_snapshot
+        with tempfile.TemporaryDirectory() as temp:
+            home=Path(temp)
+            expected={"android-re":"Inspect Android APK decompilation",
+                      "github:git":"Manage pull requests"}
+            save_native_snapshot(expected,home)
+            self.assertEqual(read_native_snapshot(home),expected)
+            file=home/"native-catalogue.json"
+            payload=json.loads(file.read_text(encoding="utf-8"))
+            payload["captured_at"]=time.time()-9*86400
+            file.write_text(json.dumps(payload),encoding="utf-8")
+            self.assertEqual(read_native_snapshot(home),{})
+
+    def test_corrupt_or_missing_catalogue_abstains(self):
+        from skillsense_test.store import read_native_snapshot
+        with tempfile.TemporaryDirectory() as temp:
+            home=Path(temp)
+            self.assertEqual(read_native_snapshot(home),{})
+            (home/"native-catalogue.json").write_text("invalid-json",encoding="utf-8")
+            self.assertEqual(read_native_snapshot(home),{})
+
+    def test_empty_capture_invalidates_stale_catalogue(self):
+        from skillsense_test.store import save_native_snapshot,read_native_snapshot
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            save_native_snapshot({"stale":"Old skill"},root)
+            save_native_snapshot({},root)
+            self.assertEqual(read_native_snapshot(root),{})
+
+    def test_router_gets_allowed_records_from_snapshot(self):
+        import skillsense_test.routing as mod
+        from unittest.mock import patch
+        sidecar=[{"id":"local:apk","name":"android-re",
+                  "source_description":"Inspect Android APK decompilation",
+                  "description":"Inspect Android APK decompilation",
+                  "tags":["apk","android","jadx"],"aliases":[],"intents":[]}]
+        with patch.object(mod,"read_index",return_value=sidecar), \
+             patch.object(mod,"read_native_snapshot",
+                          return_value={"android-re":"Inspect Android APK decompilation"}):
+            mod.clear_cache()
+            self.assertIn("android-re",mod.hint("android-re APK with jadx")["context"])
+        mod.clear_cache()
+
+    def test_missing_native_catalogue_produces_no_hint(self):
+        import skillsense_test.routing as mod
+        with patch.object(mod,"read_index",return_value=[
+             {"id":"a","name":"android-re","description":"APK files",
+              "source_description":"APK files","tags":["apk"],"aliases":[],"intents":[]}]), \
+             patch.object(mod,"read_native_snapshot",return_value={}):
+            mod.clear_cache()
+            self.assertIsNone(mod.hint("android-re APK"))
+        mod.clear_cache()
