@@ -7,8 +7,8 @@ from .core import BM25Index, Document, tokenize
 import hashlib
 import time
 from .catalog import clean_text
-from .store import read_index
-from .eligibility import native_skill_allowlist, compose_native_records
+from .store import read_index, read_native_snapshot
+from .eligibility import compose_native_records
 
 def _phrase_in_tokens(phrase: str, query_tokens: tuple[str, ...]) -> bool:
     """Require complete adjacent tokens, not substrings inside larger words."""
@@ -100,7 +100,7 @@ def get_router() -> Router:
     if _cache is None:
         with _lock:
             if _cache is None:
-                _cache = Router(compose_native_records(read_index(), native_skill_allowlist()))
+                _cache = Router(compose_native_records(read_index(), read_native_snapshot()))
     return _cache
 
 def clear_cache() -> None:

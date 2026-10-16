@@ -47,3 +47,24 @@ Hermes doctor with ephemeral home; callback context injection/no-op; invalid man
 At first router activation, SkillSense calls Hermes' `tools.skills_tool.skills_list()`, the same API Hermes uses for native listing. It explicitly rejects load names missing from the native list, duplicate names, and source-description mismatches. This covers Hermes' platform/environment/app/disabled gates and namespaced plugin listings without replicating their rules. If the listing fails, it injects **no hints**.
 
 **Trade-offs:** native eligibility is captured once per loaded router/session, so changes require a restart. Skills with no declared description cannot yet be safely matched to their filesystem source and are omitted from hints (but may still be audited). Individual project roots should be revalidated when changing working directory. This gate must not be mistaken for full session-specific availability parity.
+
+## Isolated plugin hosts and catalogue snapshots
+
+Hermes may run third-party plugins inside a separate plugin host. Calling
+`tools.skills_tool.skills_list()` directly from the per-turn hook is not a
+portable integration point. SkillSense therefore captures Hermes' canonical
+skill names and descriptions during the **CLI `skillrouter rebuild`**
+operation, where the Hermes tool module is available, and atomically writes a
+profile-scoped `native-catalogue.json`.
+
+The runtime uses only the cached `index.json` and `native-catalogue.json`,
+which requires no import from `tools.skills_tool`. The snapshot is valid for
+at most seven days; missing, corrupt, expired or empty snapshots cause
+**zero hints**, never a fallback to all files. Run `hermes skillrouter rebuild`
+after installing/updating skills, changing a profile or altering availability
+settings. Existing sessions may need to restart.
+
+This remains **session-context-limited**: a snapshot cannot fully represent
+dynamic project/environment availability. A documented context-aware Hermes
+SDK seam is needed to close [issue #7](https://github.com/xdCloudy/hermes-skillsense/issues/7)
+without adding expensive per-turn host calls.
