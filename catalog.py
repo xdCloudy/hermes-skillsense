@@ -70,7 +70,7 @@ def scan_skills(roots: list[Path]) -> list[Skill]:
     total = 0
     for raw_root in roots:
         root = Path(raw_root).expanduser()
-        if root.is_symlink() or not root.is_dir():
+        if not root.is_dir():
             continue
         root = root.resolve()
         for directory, dirs, files in os.walk(root, followlinks=False):

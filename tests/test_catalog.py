@@ -50,13 +50,15 @@ class CatalogueTests(unittest.TestCase):
                                 "positive_intents":["decompile an APK"]})
         self.assertEqual(len(good["tags"]),1)
 
-    def test_symlinked_root_rejected(self):
+    def test_symlinked_trusted_root_is_supported(self):
         from skillsense_test.catalog import scan_skills
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)/"one";root.mkdir()
+            (root/"sample").mkdir()
+            (root/"sample"/"SKILL.md").write_text("# Sample skill\\n## When to Use\\nReview code.")
             link=Path(temp)/"link"
             try:
                 link.symlink_to(root,target_is_directory=True)
             except (OSError,NotImplementedError):
                 self.skipTest("symlink creation unsupported")
-            self.assertEqual(scan_skills([link]),[])
+            self.assertEqual(len(scan_skills([link])),1)  # explicit trusted root resolves

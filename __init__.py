@@ -35,8 +35,8 @@ def _rebuild(args) -> str:
     from .routing import clear_cache
     roots = _root(args)
     for root in roots:
-        if root.is_symlink() or not root.is_dir():
-            raise ValueError(f"Skill root missing, not a directory, or symlink: {root}")
+        if not root.is_dir():
+            raise ValueError(f"Skill root missing or not a directory: {root}")
     skills = scan_skills(roots)
     if not skills:
         raise ValueError("No eligible skills found; existing index preserved")
@@ -55,8 +55,8 @@ def _clean(args) -> str:
     from .store import open_db, sync, rows, stage, publish_index
     from .local_model import enrich, endpoint
     roots = _root(args)
-    if any(root.is_symlink() or not root.is_dir() for root in roots):
-        raise ValueError("All supplied skill roots must exist and not be symlinks")
+    if any(not root.is_dir() for root in roots):
+        raise ValueError("All supplied skill roots must be readable directories")
     # Verify destination BEFORE reading any skill source.
     with_model = getattr(args,"model", "none") == "aux"
     if with_model:

@@ -7,7 +7,7 @@ permissions:
 jobs:
   hermes-doctor:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - name: Install Hermes CLI in isolated ephemeral profile
@@ -23,3 +23,42 @@ jobs:
           command -v hermes
           hermes plugins doctor . --ci
           hermes plugins validate .
+      - name: Smoke-test installed plugin CLI and lifecycle
+        shell: bash
+        env:
+          HERMES_HOME: ${{ runner.temp }}/hermes-skillsense-integration
+          CI: "true"
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          mkdir -p "$HERMES_HOME/plugins/skillsense"
+          cp plugin.yaml __init__.py core.py catalog.py store.py routing.py local_model.py "$HERMES_HOME/plugins/skillsense/"
+          hermes plugins enable skillsense
+
+          FIXTURE="$HERMES_HOME/smoke-skills/android-re"
+          mkdir -p "$FIXTURE"
+          cat > "$FIXTURE/SKILL.md" <<'EOF'
+          ---
+          name: android-re
+          description: Inspect and decompile Android APK archives
+          metadata:
+            hermes:
+              tags: [apk, android, jadx]
+          ---
+          # Android reverse engineering
+          ## When to Use
+          Investigate Android app bytecode and APK decompilation.
+          EOF
+
+          hermes skillrouter status | grep -q "no catalogue"
+          hermes skillrouter rebuild --root "$HERMES_HOME/smoke-skills" | grep -q "1 skills"
+          hermes skillrouter status | grep -q "1 skills"
+          hermes skillrouter clean --audit --dry-run --root "$HERMES_HOME/smoke-skills" | grep -q "no files or database changed"
+          hermes skillrouter enable | grep -q "enabled"
+          hermes skillrouter status | grep -q "enabled"
+          hermes skillrouter disable | grep -q "disabled"
+          hermes skillrouter status | grep -q "disabled"
+
+          # The maintenance workflow must never rewrite the skill source.
+          grep -q 'name: android-re' "$FIXTURE/SKILL.md"
+          echo "SkillSense Hermes CLI smoke test passed."
