@@ -50,7 +50,9 @@ def frontmatter(text: str) -> tuple[dict[str, object], str]:
             # A block-form declaration (key: followed by indented values)
             # is still conditional even when the first line is empty.
             if key in {"platforms", "requires", "environments",
-                       "requires_apps", "requires_toolsets", "requires_env"}:
+                       "requires_apps", "requires_toolsets", "requires_tools",
+                       "fallback_for_toolsets", "fallback_for_tools",
+                       "requires_env"}:
                 data["conditional"] = True
             if indent == 0:
                 scope = key

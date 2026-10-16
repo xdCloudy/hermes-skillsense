@@ -44,4 +44,4 @@ The cached index and SQLite sidecar are profile-scoped under the Hermes plugin d
 
 ## Limitations
 
-Only explicitly trusted roots are scanned. Nontrivial skill platforms, tool requirements and project precedence cannot yet be proven identical to native Hermes discovery. Treat hints as candidates requiring native verification.
+Only explicitly trusted roots are scanned. The sidecar refuses enrichment for source skills declaring platform/requirement restrictions, including Hermes' `requires_toolsets`, `requires_tools`, `fallback_for_toolsets` and `fallback_for_tools` (inline or block-form). Such skills can still use a native-only fallback **if present in the canonical snapshot**; generated aliases are not attached to them. This conservative safeguard does not establish per-session availability equivalence. Project precedence and changing tool availability remain outside the plugin's proven contract. Treat hints as candidates requiring native verification.
