@@ -20,12 +20,15 @@ Data: `benchmarks/selection-catalogue-v1.json` and `benchmarks/selection-cases-v
 ## Metrics
 
 - **Positive top-1 hit rate:** proportion of cases with at least one relevant skill whose first suggestion is relevant.
-- **Positive Recall@3:** proportion of relevant cases where at least one of the top three suggestions is relevant.
-- **No-skill false-positive rate:** proportion of intentionally irrelevant/ambiguous cases where *any* skill was suggested.
+- **Positive top-3 task hit rate:** proportion of positive tasks where at least one of the top three suggestions is relevant (legacy output key `recall_at_3_on_positive`).
+- **Micro Recall@3:** relevant skill labels retrieved among the three suggestions, divided by all relevant skill labels across tasks. Unlike the hit rate, this accounts for multi-skill ground truth.
+- **Precision of emitted hints:** relevant emitted skill hints divided by all emitted hints (up to three per task).
+- **No-skill false-positive rate:** proportion of irrelevant/ambiguous tasks where *any* skill was suggested. New JSON metrics use `null` for missing denominators; zero observations do not imply a zero error rate.
+- **Wilson 95% intervals:** descriptive binomial uncertainty intervals for top-1 positive-task hit rate and no-skill false-positive rate. Small samples produce wide bounds; they do not correct biased task selection or incorrect labels.
 - **Latency p95:** isolated in-process ranker latency, not Hermes hook startup or skill loading time.
 - Misses and unwanted suggestions are printed as structured JSON.
 
-These should be reported together. A router which always abstains has low false positives but zero recall; a router which always suggests a skill has high coverage but poor precision.
+These should be reported together. The historical JSON fields `precision_at_1_on_positive` and `recall_at_3_on_positive` remain for compatibility but are **task hit rates**, not micro recall or hint precision. Prefer the explicitly named new metrics. A router which always abstains has low false positives but zero recall; a router which always suggests a skill has high coverage but poor precision.
 
 ## Production accuracy release gate
 
