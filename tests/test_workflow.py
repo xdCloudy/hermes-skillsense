@@ -148,3 +148,41 @@ class WorkflowTests(unittest.TestCase):
 
 if __name__=="__main__":
     unittest.main()
+
+    def test_opt_in_empty_rebuild_reconciles_only_requested_root(self):
+        from skillsense_test.store import open_db, rows, read_index
+        from unittest.mock import patch
+        primary = self.home / "skills"
+        secondary = self.home / "other-skills"
+        other = secondary / "secondary"
+        other.mkdir(parents=True)
+        (other / "SKILL.md").write_text(
+            "---\nname: secondary\ndescription: Manage secondary workflows\n---\n",
+            encoding="utf-8")
+        with patch("skillsense_test.eligibility.native_skill_allowlist",
+                   return_value={"secondary":"Manage secondary workflows"}):
+            self.plugin._rebuild(argparse.Namespace(roots=[str(primary),str(secondary)]))
+            conn=open_db()
+            try:
+                self.assertEqual({row["name"] for row in rows(conn)},
+                                 {"android-re","secondary"})
+            finally:
+                conn.close()
+
+            source = self.skills / "SKILL.md"
+            source.unlink()
+            with self.assertRaisesRegex(ValueError,"--allow-empty"):
+                self.plugin._rebuild(argparse.Namespace(roots=[str(primary)]))
+            self.assertEqual({row["name"] for row in read_index()},
+                             {"android-re","secondary"})
+
+            result = self.plugin._rebuild(argparse.Namespace(
+                roots=[str(primary)], allow_empty=True))
+            self.assertIn("0 skills", result)
+            self.assertEqual({row["name"] for row in read_index()}, {"secondary"})
+            conn=open_db()
+            try:
+                self.assertEqual({row["name"] for row in rows(conn)}, {"secondary"})
+            finally:
+                conn.close()
+        self.assertTrue((other / "SKILL.md").is_file())

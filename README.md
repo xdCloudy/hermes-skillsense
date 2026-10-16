@@ -131,7 +131,7 @@ You may also configure **Enabled**, **Maximum Suggestions**, **Local Model Endpo
 
 For isolated Hermes plugin hosts, `skillrouter rebuild` captures the canonical Hermes skill catalogue in a profile-scoped sidecar. The runtime reads this snapshot without importing host-only modules. **It expires after seven days**; rerun `hermes skillrouter rebuild` after skill/profile changes. Missing or expired snapshots produce no hints.
 
-The default scan covers `$HERMES_HOME/skills` (or `~/.hermes/skills`). Extra trusted skill roots can be selected using `--root PATH`; the plugin does not automatically index untrusted project skills. Unsupported platform/requirement declarations are excluded conservatively.
+The default scan covers `$HERMES_HOME/skills` (or `~/.hermes/skills`). Extra trusted skill roots can be selected using `--root PATH`; the plugin does not automatically index untrusted project skills. Unsupported platform/requirement declarations are excluded conservatively. When an explicitly selected root becomes empty, `rebuild` protects its previous sidecar data by default; use `rebuild --root PATH --allow-empty` only after verifying that the root should be reconciled as empty. It prunes only that root's sidecar records and never changes SKILL.md files.
 
 ### Refresh skills visible in Hermes' canonical list
 
