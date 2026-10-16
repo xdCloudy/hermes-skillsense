@@ -70,7 +70,9 @@ python tools/export_catalogue.py \
 ```
 
 The exporter refuses missing or expired native snapshots, and refuses to
-overwrite an existing output. It uses the same conservative native/sidecar
+overwrite an existing output. New exports use owner-only file permissions
+(`0600` on POSIX) and new output directories use `0700` where supported;
+permissions of existing parent directories remain outside its control. It uses the same conservative native/sidecar
 matching code as routing, with no model, browser or network calls.
 
 **Privacy:** The exporter replaces internal skill IDs (which may include absolute

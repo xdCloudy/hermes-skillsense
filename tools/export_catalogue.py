@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from routing_import import router_class
@@ -47,11 +48,23 @@ def export(data_dir: Path, output: Path) -> int:
         )
     ]
     payload = {"schema_version": 1, "skills": skills}
-    output.parent.mkdir(parents=True, exist_ok=True)
-    # Exclusive creation means existing local evidence is never overwritten.
-    with output.open("x", encoding="utf-8") as stream:
-        json.dump(payload, stream, ensure_ascii=False, indent=2)
-        stream.write("\n")
+    # Metadata may contain private skill names/descriptions. Limit access on
+    # newly created output files instead of relying on the process umask.
+    output.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    fd = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(payload, stream, ensure_ascii=False, indent=2)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+    except BaseException:
+        # Incomplete exports must not be mistaken for valid evaluation data.
+        try:
+            output.unlink()
+        except OSError:
+            pass
+        raise
     return len(skills)
 
 

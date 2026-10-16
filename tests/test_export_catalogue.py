@@ -1,5 +1,7 @@
 """Offline evaluation catalogue export must not touch prompt history or overwrite data."""
 import json
+import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -88,3 +90,38 @@ class ExportCatalogueTests(unittest.TestCase):
             self.assertEqual(exported["negative_intents"],["create an android apk"])
             self.assertEqual(exported["id"], "export::00001")
             self.assertNotIn(str(root), output.read_text(encoding="utf-8"))
+
+    @unittest.skipUnless(os.name == "posix", "POSIX permissions only")
+    def test_output_is_private_even_with_permissive_umask(self):
+        from skillsense_test.store import save_native_snapshot
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            data = root / "data"
+            save_native_snapshot({"private-skill": "Private metadata"}, data)
+            target = root / "nested" / "catalogue.json"
+            old_umask = os.umask(0)
+            try:
+                result = self.run_cli(data, target)
+            finally:
+                os.umask(old_umask)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(stat.S_IMODE(target.stat().st_mode), 0o600)
+            self.assertEqual(stat.S_IMODE(target.parent.stat().st_mode), 0o700)
+            self.assertIn("private-skill", target.read_text(encoding="utf-8"))
+
+    def test_symlink_target_is_never_followed_or_overwritten(self):
+        from skillsense_test.store import save_native_snapshot
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            data = root / "data"
+            save_native_snapshot({"skill": "Private skill description"}, data)
+            existing = root / "existing.json"
+            existing.write_text("protected original", encoding="utf-8")
+            symlink = root / "catalogue.json"
+            try:
+                symlink.symlink_to(existing)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlinks unavailable")
+            result = self.run_cli(data, symlink)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(existing.read_text(encoding="utf-8"), "protected original")
