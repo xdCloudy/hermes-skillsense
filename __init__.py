@@ -122,6 +122,15 @@ def _review(args) -> str:
             raise ValueError(f"Expected one matching skill; found {len(matches)}")
         ok = decide(conn,matches[0]["id"],action=="approve")
         if not ok:
+            # A stale approval attempt can revoke previously approved metadata.
+            # Publish that revocation before returning; otherwise the JSON
+            # router index could keep serving a revoked enriched description.
+            current = next((r for r in rows(conn) if r["id"] == matches[0]["id"]), None)
+            if current and current["status"] == "stale":
+                publish_index(conn)
+                clear_cache()
+                return ("Proposal is stale because its SKILL.md changed; "
+                        "approved metadata invalidated. Rebuild and audit again.")
             return "No pending proposal for that skill."
         publish_index(conn)
         clear_cache()
