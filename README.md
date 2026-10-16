@@ -86,7 +86,7 @@ hermes skillrouter status
 hermes skillrouter doctor
 ```
 
-Planned in-session entry point: `/skillrouter`.
+Available in-session commands: `/skillrouter status` and `/skillrouter doctor`.
 
 **Planned, not yet available:** `clean --audit`, `review`, `rebuild`, and `benchmark`. Metadata Clean defaults will be **audit + auxiliary model + sidecar storage**. No cleanup runs in the scaffold.
 
