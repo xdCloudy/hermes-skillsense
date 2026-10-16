@@ -20,6 +20,10 @@ jobs:
               "docs/METADATA_SCHEMA.md", "docs/INTEGRATION.md",
               "docs/BENCHMARKS.md", "docs/BRANDING.md",
               ".github/PULL_REQUEST_TEMPLATE.md",
+              "plugin.yaml", "__init__.py", "core.py",
+              "tests/test_core.py", "tests/test_plugin.py",
+              "docs/DEVELOPMENT.md", "docs/CONFIGURATION.md",
+              "SUPPORT.md", "MAINTAINERS.md",
               "assets/skillsense-logo.png",
           ]
           missing = [p for p in required if not Path(p).is_file()]

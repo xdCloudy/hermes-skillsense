@@ -1,0 +1,16 @@
+name: Question
+description: Ask about SkillSense design, setup or contributing
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Please avoid posting private Hermes skills or credentials.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Relevant context

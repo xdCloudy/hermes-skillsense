@@ -4,8 +4,8 @@ SkillSense is **pre-alpha / planning**. These are intended milestones, not deliv
 
 | Milestone | Scope | Gate |
 | --- | --- | --- |
-| M0: Bootstrap | Brand, docs, issue templates, license, agent guidance | Repository is coherent; no broken feature claims |
-| M1: Plugin skeleton | Native Hermes manifest, registration, no-op hook, CLI/slash status, doctor | Installs and disables with no side effects |
+| M0: Bootstrap (complete) | Brand, docs, issue templates, licence, agent guidance, first testable scaffold | Repository structure verified |
+| M1: Plugin skeleton (in progress) | Native manifest, registration, no-op hook, CLI/slash status added | Still needs Hermes doctor/validator and install/uninstall verification |
 | M2: Lexical retrieval | Safe skill discovery, parser, BM25, availability filters, abstention | Reproducible retrieval tests; normal Hermes still works |
 | M3: Sidecar storage | SQLite schema, versioning, atomic indexes, profile isolation | Integrity and migration tests |
 | M4: Deterministic audit | Metadata quality checks, hashing, dry-run, reports | No model necessary |

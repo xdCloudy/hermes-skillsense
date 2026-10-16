@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/skillsense-logo.png" alt="SkillSense — cloud with an intelligent skill selection pathway" width="420">
+<img src="assets/skillsense-logo.png" alt="SkillSense — cloud with an intelligent skill selection pathway" width="400">
 
 # SkillSense
 
@@ -15,7 +15,7 @@ A lightweight, local-first skill router for [Hermes Agent](https://github.com/No
 </div>
 
 > [!IMPORTANT]
-> **Project status: planning / bootstrap (pre-alpha).** This repository currently describes the intended plugin; its routing, metadata-cleaning and integration features are **not yet implemented or released**. The interfaces and commands below are design targets, not installation instructions.
+> **Project status: pre-alpha scaffold (v0.1.0).** A native Hermes plugin entry point, diagnostic commands, a standalone BM25 core and unit tests are now present. **Live routing, skill scanning and Metadata Clean are not implemented.** The registered pre-LLM hook is intentionally a no-op. Plugin API compatibility must still be validated on a real Hermes installation.
 
 ## Why SkillSense?
 
@@ -54,7 +54,7 @@ Installed SKILL.md files
 
 Neither skill bodies nor generated metadata should be written back to third-party `SKILL.md` files.
 
-## Planned capabilities
+## Architecture and planned capabilities
 
 | Area | Design |
 | --- | --- |
@@ -79,27 +79,39 @@ These are **targets, not achieved benchmark results**:
 - Default context addition of **0–60 tokens** and at most three skill suggestions.
 - No skill instructions loaded until Hermes actually requests them.
 
-## Command design (not implemented)
+## Available scaffold commands
 
 ```bash
 hermes skillrouter status
-hermes skillrouter clean --audit --dry-run
-hermes skillrouter clean --audit --model aux
-hermes skillrouter review
-hermes skillrouter rebuild
-hermes skillrouter benchmark
 hermes skillrouter doctor
 ```
 
 Planned in-session entry point: `/skillrouter`.
 
-The default cleanup choice is **audit + auxiliary model + sidecar storage**. Cleaning is opt-in; proposals are not automatically activated without approval unless the user explicitly enables a conservative auto-approval policy.
+**Planned, not yet available:** `clean --audit`, `review`, `rebuild`, and `benchmark`. Metadata Clean defaults will be **audit + auxiliary model + sidecar storage**. No cleanup runs in the scaffold.
+
+## Develop and validate the scaffold
+
+```bash
+python -m unittest discover -s tests -v
+python tools/check_repo.py
+hermes plugins doctor . --ci  # requires a local Hermes installation
+```
+
+See [development setup](docs/DEVELOPMENT.md). The plain Python tests do not substitute for a successful Hermes integration test.
 
 ## Documentation
 
 | Document | Purpose |
 | --- | --- |
 | [GOAL.md](GOAL.md) | Mission, scope, and non-negotiable constraints |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Clone, test and Hermes integration checks |
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Current and proposed settings |
+| [docs/CLI.md](docs/CLI.md) | Available diagnostic commands and planned operations |
+| [docs/FAQ.md](docs/FAQ.md) | Design and installation questions |
+| [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md) | Architectural decision log |
+| [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) | Threat boundaries and mitigations |
+| [docs/RELEASING.md](docs/RELEASING.md) | Release gates |
 | [SPEC.md](SPEC.md) | Metadata Clean functional and technical specification |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Component boundaries and lifecycle |
 | [ROADMAP.md](ROADMAP.md) | Ordered milestones and release gates |

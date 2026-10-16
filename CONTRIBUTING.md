@@ -6,13 +6,13 @@ Thanks for helping build a small, reliable, local-first Hermes skill router.
 
 Read [GOAL.md](GOAL.md), [SPEC.md](SPEC.md), [ARCHITECTURE.md](ARCHITECTURE.md), [AGENTS.md](AGENTS.md), and [SECURITY.md](SECURITY.md). Search existing issues before starting substantial work; propose API or security changes in an issue first.
 
-This is currently a **documentation-first pre-alpha** repository. The plugin implementation and test harness do not exist yet.
+This is a **pre-alpha** repository. A minimal plugin entry point, pure BM25 core, and Python unit tests exist. Routing, Metadata Clean and actual Hermes-host validation are outstanding.
 
 ## Local development (when implementation exists)
 
 - Use a recent supported Python version and an isolated environment.
 - Avoid introducing a runtime dependency without an explicit rationale.
-- Run `python -m unittest discover -s tests` after the test suite has been added.
+- Run `python -m unittest discover -s tests -v` for the existing unit-test suite.
 - Validate with `hermes plugins doctor . --ci` and `hermes plugins validate .` against supported Hermes versions when a valid plugin manifest exists.
 - Test Windows, macOS and Linux behaviour when touching filesystem or process logic.
 

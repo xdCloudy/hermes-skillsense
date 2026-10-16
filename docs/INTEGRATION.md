@@ -1,6 +1,6 @@
 # Hermes Integration Notes
 
-**Status: design only.** These integration surfaces must be verified against the target Hermes release as implementation begins.
+**Status: native skeleton implemented, integration unverified.** `plugin.yaml` and `__init__.py` register no-op `pre_llm_call`, terminal `skillrouter status|doctor` and slash `skillrouter`. Validate on installed Hermes before advertising installation support. Metadata Clean remains design only.
 
 ## Primary source
 
@@ -20,7 +20,7 @@ These are integration targets, **not** a claim of an installable plugin in this 
 
 ## Packaging sequence
 
-1. Implement safe no-op `register(ctx)` with basic status commands.
+1. Implement safe no-op `register(ctx)` with basic status commands. **Complete in scaffold.**
 2. Add accurate `plugin.yaml` declarations; do not declare hooks or tools that aren't registered.
 3. Validate via `hermes plugins doctor . --ci`.
 4. Validate catalog compatibility via `hermes plugins validate .`.

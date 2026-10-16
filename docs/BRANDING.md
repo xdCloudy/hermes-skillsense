@@ -13,7 +13,7 @@
 
 ## Artwork
 
-The approved primary lockup is `assets/skillsense-logo.png`, featuring a cloud, branching route and checkmark with the **SkillSense** wordmark. Use a transparent background and retain breathing room. Do not redraw Hermes' own logo or imply official endorsement.
+The primary lockup is `assets/skillsense-logo.png` (transparent, neutral charcoal and blue), featuring a cloud, branching route and checkmark with the **SkillSense** wordmark. The updated rendition is designed to sit on light or dark repository themes; retain breathing room and check contrast in both modes. Do not redraw Hermes' own logo or imply official endorsement.
 
 For small icons, create an **icon-only derivative** rather than shrinking the entire wordmark to unreadable sizes. Optimise both dark- and light-mode legibility before using it as a marketplace icon.
 
@@ -21,7 +21,7 @@ For small icons, create an **icon-only derivative** rather than shrinking the en
 
 | Name | Approximate colour |
 | --- | --- |
-| Near-black navy | `#0E1A2D` |
+| Neutral charcoal | `#303C4A` |
 | Route blue | `#007BFF` |
 | Bright cyan | `#02AFF4` |
 | White | `#FFFFFF` |

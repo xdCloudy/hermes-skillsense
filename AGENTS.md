@@ -6,7 +6,7 @@ Read this file **before editing code or documentation** in SkillSense.
 
 Implement [GOAL.md](GOAL.md) and [SPEC.md](SPEC.md) without violating [SECURITY.md](SECURITY.md). If an instruction conflicts, priority is: user instruction → security and safety invariants → current upstream Hermes documented API → repository specifications → convenience.
 
-**Status:** repository bootstrap, not a functional plugin yet. Do not pretend otherwise.
+**Status:** v0.1.0 scaffold exists. Native registration, diagnostic commands and standalone BM25 core are present; **routing and Metadata Clean are not active**. Do not pretend otherwise.
 
 ## Non-negotiable rules
 
