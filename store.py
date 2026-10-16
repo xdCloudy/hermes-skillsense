@@ -5,6 +5,7 @@ The database contains retrieval metadata only. Skill files are never modified.
 from __future__ import annotations
 from pathlib import Path
 import json
+import hashlib
 import os
 import sqlite3
 import tempfile
@@ -42,8 +43,8 @@ def open_db(home: Path | None = None) -> sqlite3.Connection:
         db.execute("PRAGMA user_version=1")
     return db
 
-def sync(conn: sqlite3.Connection, skills: list) -> dict[str, int]:
-    """One transaction. Changed sources invalidate approvals rather than applying stale metadata."""
+def sync(conn: sqlite3.Connection, skills: list, roots: list[Path] | None = None) -> dict[str, int]:
+    """Upsert changed files; prune only within explicitly scanned complete roots."""
     changed, added, current = 0, 0, {skill.identity for skill in skills}
     with conn:
         for item in skills:
@@ -67,11 +68,18 @@ def sync(conn: sqlite3.Connection, skills: list) -> dict[str, int]:
                     (item.name,item.description,json.dumps(item.tags),json.dumps(item.intents),
                      item.sha256,item.path,int(time.time()),changed_source,changed_source,
                      changed_source,item.identity))
-        # Scope removal to the complete selected root list; caller must avoid accidental subset scans.
-        for old in conn.execute("SELECT id FROM skills").fetchall():
-            if old["id"] not in current:
-                conn.execute("DELETE FROM skills WHERE id=?", (old["id"],))
-    return {"total":len(skills),"added":added,"changed":changed}
+        # A partial root scan must NEVER erase metadata for other roots.
+        removed = 0
+        scope = [Path(root).expanduser().resolve() for root in (roots or [])]
+        if scope:
+            for old in conn.execute("SELECT id,path FROM skills").fetchall():
+                if old["id"] in current:
+                    continue
+                path = Path(old["path"]).resolve()
+                if any(path.is_relative_to(root) for root in scope):
+                    conn.execute("DELETE FROM skills WHERE id=?", (old["id"],))
+                    removed += 1
+    return {"total":len(skills),"added":added,"changed":changed,"removed":removed}
 
 def stage(conn: sqlite3.Connection, identity: str, source_hash: str, proposal: dict) -> bool:
     """Compare-and-swap source hash; rejects model responses for changed skills."""
@@ -85,10 +93,20 @@ def stage(conn: sqlite3.Connection, identity: str, source_hash: str, proposal: d
 
 def decide(conn: sqlite3.Connection, identity: str, approve: bool) -> bool:
     with conn:
-        row = conn.execute("SELECT pending FROM skills WHERE id=?", (identity,)).fetchone()
+        row = conn.execute("SELECT pending,path,source_hash FROM skills WHERE id=?", (identity,)).fetchone()
         if row is None or not row["pending"]:
             return False
         if approve:
+            # Do not approve metadata for a file changed after an audit.
+            try:
+                data = Path(row["path"]).read_text(encoding="utf-8")
+                current_hash = hashlib.sha256(data.encode("utf-8")).hexdigest()
+            except (OSError, ValueError):
+                current_hash = None
+            if current_hash != row["source_hash"]:
+                conn.execute("UPDATE skills SET approved=NULL,pending=NULL,status='stale' WHERE id=?",
+                             (identity,))
+                return False
             conn.execute("UPDATE skills SET approved=pending,pending=NULL,status='approved' WHERE id=?",
                          (identity,))
         else:

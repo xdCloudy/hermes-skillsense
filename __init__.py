@@ -42,7 +42,7 @@ def _rebuild(args) -> str:
         raise ValueError("No eligible skills found; existing index preserved")
     conn = open_db()
     try:
-        result = sync(conn, skills)
+        result = sync(conn, skills, roots=roots)
         publish_index(conn)
     finally:
         conn.close()
@@ -72,7 +72,7 @@ def _clean(args) -> str:
     conn = open_db()
     counts = {"proposed":0,"skipped":0,"failed":0}
     try:
-        sync(conn,skills)
+        sync(conn,skills,roots=roots)
         by_id = {r["id"]:r for r in rows(conn)}
         for s in skills:
             existing = by_id[s.identity]
