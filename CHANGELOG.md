@@ -6,6 +6,8 @@ All notable project changes will be documented here. Release entries will follow
 
 ### Merged hardening since v0.2.2 candidate
 
+- Hardened text-only hot-path routing against multimodal input coercion, oversized-turn normalization and duplicate-name secondary hints (pending PR).
+
 - Verified public GitHub installation and exact-PR installation checks (#15, #18).
 - Guarded against stale or shadowed skill names and approved negative-intent mismatches (#19).
 - Prevented incomplete and unreadable scans from corrupting or pruning sidecar data (#20, #24).

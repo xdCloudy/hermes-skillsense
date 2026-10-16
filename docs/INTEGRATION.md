@@ -7,7 +7,8 @@
 - The plugin registers a `pre_llm_call` hook through Hermes' `PluginContext`. When routing is enabled, a sufficiently specific query may return `{"context": "..."}`, adding ephemeral user-turn context without modifying the stable system prompt or installed skill files.
 - A cached BM25 index is loaded from `index.json`. A separate `native-catalogue.json` snapshot records the Hermes-visible skill load names and descriptions. Both are in the plugin's profile-local storage.
 - Canonical names are captured during explicitly invoked maintenance commands using Hermes' existing `tools.skills_tool.skills_list()`; the ordinary-turn hook does **not** import that host-internal module.
-- The router only emits names supported by the native snapshot, omits duplicates or ambiguous matches, and uses native-only descriptions when sidecar attribution cannot be verified. An absent, malformed, empty or expired native snapshot produces no suggestions.
+- The router only emits names supported by the native snapshot, omits duplicates or ambiguous matches (including secondary hints), and uses native-only descriptions when sidecar attribution cannot be verified. An absent, malformed, empty or expired native snapshot produces no suggestions.
+- Hermes may supply multimodal turns as content-part lists. This beta routes **text-only string** turns; non-string turns abstain instead of converting image/attachment payloads into search text. Text input is bounded before Unicode normalization.
 - The native snapshot is valid for at most seven days. The in-memory router periodically rechecks it. Refresh after modifying installed skills, environment availability or profiles.
 - Native `skill_view` and skill loading remain fully owned by Hermes. SkillSense only suggests possible relevant load names.
 
