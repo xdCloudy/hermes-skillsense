@@ -4,6 +4,8 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Catch conditional Hermes skill fields inside compact YAML flow maps, avoiding accidental sidecar enrichment when tool or session requirements are hidden in inline mappings.
+
 - Bound verified native snapshots to 2,500 entries on write and read, preventing oversized on-disk metadata from allocating unbounded live BM25 indexes. Failed refreshes preserve prior snapshots.
 - Bounded and hashed session deduplication keys; avoid retaining raw/oversized host session IDs in the process-global hint cache.
 
