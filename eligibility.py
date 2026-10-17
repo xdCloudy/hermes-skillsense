@@ -11,6 +11,11 @@ import json
 from typing import Any
 import re
 
+# Match the bounds and load-name grammar used by the persisted snapshot.
+_LOAD_NAME = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_./:-]{0,199}\Z")
+_MAX_NATIVE_SKILLS = 2500
+_MAX_NATIVE_REPLY_CHARS = 2_000_000
+
 
 def native_skill_catalogue() -> dict[str, str] | None:
     """Capture a validated host catalogue, distinguishing failure from empty.
@@ -23,25 +28,30 @@ def native_skill_catalogue() -> dict[str, str] | None:
     try:
         from tools.skills_tool import skills_list  # Host-only import.
         raw = skills_list()
+        # This is maintenance-only, but malformed host output must not cause
+        # a large parser allocation or a false verified-empty refresh.
+        if not isinstance(raw, str) or len(raw) > _MAX_NATIVE_REPLY_CHARS:
+            return None
         data = json.loads(raw)
         if not isinstance(data, dict) or data.get("success") is not True:
             return None
         entries = data.get("skills")
-        if not isinstance(entries, list):
+        if not isinstance(entries, list) or len(entries) > _MAX_NATIVE_SKILLS:
             return None
-        parsed: list[tuple[str, str]] = []
+        parsed: dict[str, str] = {}
         for entry in entries:
             if not isinstance(entry, dict):
-                continue
+                return None
             name, desc = entry.get("name"), entry.get("description", "")
-            if (not isinstance(name, str) or not name or len(name) > 200
-                    or not isinstance(desc, str)):
-                continue
-            parsed.append((name, desc))
-        parsed = [(name,desc) for name,desc in parsed
-                  if re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_./:-]{0,199}",name)]
-        duplicates = Counter(name for name, _ in parsed)
-        return {name: desc for name, desc in parsed if duplicates[name] == 1}
+            if (not isinstance(name, str) or not _LOAD_NAME.fullmatch(name)
+                    or not isinstance(desc, str) or len(desc) > 1024
+                    or name in parsed):
+                # Duplicate/invalid load names are not proven unambiguous.
+                # Reject the whole host reply rather than silently replacing
+                # a verified catalogue with a potentially misleading subset.
+                return None
+            parsed[name] = desc
+        return parsed
     except Exception:
         # A plugin must not break inference if Hermes catalogue access fails.
         return None

@@ -83,3 +83,40 @@ class EligibilityTests(unittest.TestCase):
                 {"name":"visible","description":"Inspect local installed workflows"}]})
             self.assertEqual(native_skill_catalogue(),
                              {"visible":"Inspect local installed workflows"})
+
+    def test_malformed_successful_host_catalogues_are_not_verified_empty(self):
+        from types import ModuleType
+        from skillsense_test.eligibility import native_skill_catalogue, native_skill_allowlist
+        fake = ModuleType("tools.skills_tool")
+        invalid_replies = [
+            {"success": True, "skills": [None]},
+            {"success": True, "skills": [{"name": "bad name", "description": "Text"}]},
+            {"success": True, "skills": [{"name": "valid", "description": None}]},
+            {"success": True, "skills": [{"name": "valid", "description": "x"*1025}]},
+            {"success": True, "skills": [
+                {"name": "duplicated", "description": "A"},
+                {"name": "duplicated", "description": "B"}]},
+            {"success": True, "skills": [
+                {"name": "valid", "description": "Fine"},
+                {"description": "Missing name"}]},
+            {"success": True, "skills": [
+                {"name": f"item-{i}", "description": "Tiny"}
+                for i in range(2501)]},
+        ]
+        with patch.dict(sys.modules, {"tools.skills_tool": fake}):
+            for reply in invalid_replies:
+                with self.subTest(reply=str(reply)[:90]):
+                    fake.skills_list = lambda value=reply: json.dumps(value)
+                    self.assertIsNone(native_skill_catalogue())
+                    self.assertEqual(native_skill_allowlist(), {})
+            fake.skills_list = lambda: " " * 2_000_001
+            self.assertIsNone(native_skill_catalogue())
+
+            fake.skills_list = lambda: json.dumps({
+                "success": True, "skills": [
+                    {"name": "plugin:network", "description": "Manage network skills"},
+                    {"name": "ordinary", "description": ""}]})
+            self.assertEqual(native_skill_catalogue(), {
+                "plugin:network": "Manage network skills", "ordinary": ""})
+            fake.skills_list = lambda: json.dumps({"success": True, "skills": []})
+            self.assertEqual(native_skill_catalogue(), {})
