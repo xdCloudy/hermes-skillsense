@@ -4,6 +4,7 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Restricted SQLite sidecar creation to owner-only permissions on POSIX, repairing old overly permissive database files and refusing final-path symlinks where O_NOFOLLOW is supported.
 - Conservatively skip source enrichment for session-platform and required-environment-variable conditioned skills, including block-form YAML.
 
 - Added real-Hermes enable/disable integration coverage for a native plugin skill and updated outdated skill-listing compatibility claims against current upstream source.
