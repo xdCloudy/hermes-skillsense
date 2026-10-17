@@ -4,6 +4,7 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Publish the reconciled approved index before optional long-running local-model audit requests, avoiding needless native-only fallback throughout the audit; pending proposals still require explicit approval.
 - Reject entire partially malformed native catalogues on read (including unexpected envelope fields, invalid load names/descriptions, and non-finite timestamps) instead of trusting a silently filtered subset.
 - Distinguish a verified empty Hermes skill list from unavailable/malformed host responses during `refresh-native`: clear stale availability after successful empty lookups, preserve the previous snapshot on errors.
 

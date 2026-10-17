@@ -184,5 +184,43 @@ class WorkflowTests(unittest.TestCase):
                 conn.close()
         self.assertTrue((other / "SKILL.md").is_file())
 
+    def test_model_audit_preserves_published_approved_hints_during_calls(self):
+        from unittest.mock import patch
+        from skillsense_test.store import open_db, rows, stage, read_index_status
+        self.plugin._rebuild(argparse.Namespace(roots=None))
+        db = open_db()
+        try:
+            original = rows(db)[0]
+            self.assertTrue(stage(db, original["id"], original["source_hash"], {
+                "description": "Inspect Android APK decompilation",
+                "aliases": ["approved developer alias"]
+            }))
+        finally:
+            db.close()
+        self.assertIn("Approved", self.plugin._review(
+            argparse.Namespace(review_action="approve", skill="android-re")))
+
+        observed = []
+        def during_inference(source, model, endpoint):
+            data, valid = read_index_status()
+            observed.append(valid)
+            self.assertTrue(valid, "Long model audit must not leave an invalid index")
+            self.assertIn("approved developer alias", data[0]["aliases"])
+            return {"description": "Inspect Android APK decompilation",
+                    "aliases": ["new pending alias"]}
+
+        with patch("skillsense_test.local_model.enrich", side_effect=during_inference):
+            result = self.plugin._clean(argparse.Namespace(
+                roots=None, model="aux", dry_run=False, force=True,
+                endpoint="http://127.0.0.1:8011/v1/chat/completions",
+                model_id="local-test", max_inferences=1, offset=0))
+        self.assertIn("1 pending review", result)
+        self.assertEqual(observed, [True])
+        published, valid = read_index_status()
+        self.assertTrue(valid)
+        self.assertIn("approved developer alias", published[0]["aliases"])
+        self.assertNotIn("new pending alias", published[0]["aliases"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -145,6 +145,11 @@ def _clean(args) -> str:
     deferred = 0
     try:
         sync(conn,skills,roots=roots)
+        # A manual local-model audit may run for minutes. Complete the
+        # safety-critical source/index reconciliation before calling the
+        # model; staging proposals changes only pending, never approved.
+        publish_index(conn)
+        clear_cache()
         by_id = {r["id"]:r for r in rows(conn)}
         eligible = []
         for skill in skills:
@@ -171,7 +176,6 @@ def _clean(args) -> str:
                 counts["proposed"] += int(stage(conn,skill.identity,skill.sha256,proposal))
             except Exception:
                 counts["failed"] += 1
-        publish_index(conn)
         save_native_snapshot(native_skill_allowlist())
     finally:
         conn.close()
