@@ -4,6 +4,8 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Validate every canonical Hermes listing entry and bound host response size/count before accepting catalogue updates; reject partial, duplicate or malformed successful responses instead of mistaking them for verified emptiness.
+
 - Preserve a previous native eligibility snapshot when Hermes catalogue lookup fails during `rebuild` or non-dry-run `clean --audit`, mirroring `refresh-native`; verified-empty results still revoke prior names, and maintenance reports warnings.
 
 - Clear per-session duplicate-hint suppression whenever the router cache is explicitly invalidated, so catalogue changes do not leave stale five-minute suppression behind.
