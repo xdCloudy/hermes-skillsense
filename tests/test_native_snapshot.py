@@ -107,12 +107,12 @@ class NativeSnapshotTests(unittest.TestCase):
                 lambda p: p.update({"maintenance_incomplete": True}),
                 lambda p: p.update({"captured_at": True}),
             ):
-                payload = json.loads(file.read_text(encoding="utf-8"))
+                payload = json.loads(path.read_text(encoding="utf-8"))
                 payload["skills"] = dict(valid)
                 payload.pop("maintenance_incomplete", None)
                 payload["captured_at"] = time.time()
                 mutation(payload)
-                file.write_text(json.dumps(payload),encoding="utf-8")
+                path.write_text(json.dumps(payload),encoding="utf-8")
                 self.assertEqual(read_native_snapshot(home), {})
 
     def test_oversized_native_snapshot_never_reaches_hot_path(self):
