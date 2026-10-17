@@ -65,3 +65,21 @@ class EligibilityTests(unittest.TestCase):
         self.assertEqual(out[0]["description"],"Decompile Android APK archives")
         self.assertEqual(out[0]["tags"],[])
         self.assertEqual(out[0]["id"],"native::android-re")
+
+    def test_canonical_catalogue_distinguishes_confirmed_empty_from_failure(self):
+        import sys
+        from types import ModuleType
+        from skillsense_test.eligibility import native_skill_catalogue, native_skill_allowlist
+        fake = ModuleType("tools.skills_tool")
+        with patch.dict(sys.modules, {"tools.skills_tool": fake}):
+            fake.skills_list = lambda: json.dumps({"success": True, "skills": []})
+            self.assertEqual(native_skill_catalogue(), {})
+            fake.skills_list = lambda: json.dumps({"success": False, "skills": []})
+            self.assertIsNone(native_skill_catalogue())
+            self.assertEqual(native_skill_allowlist(), {})
+            fake.skills_list = lambda: "not JSON"
+            self.assertIsNone(native_skill_catalogue())
+            fake.skills_list = lambda: json.dumps({"success": True, "skills": [
+                {"name":"visible","description":"Inspect local installed workflows"}]})
+            self.assertEqual(native_skill_catalogue(),
+                             {"visible":"Inspect local installed workflows"})

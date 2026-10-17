@@ -4,6 +4,8 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Distinguish a verified empty Hermes skill list from unavailable/malformed host responses during `refresh-native`: clear stale availability after successful empty lookups, preserve the previous snapshot on errors.
+
 - Catch conditional Hermes skill fields inside compact YAML flow maps, avoiding accidental sidecar enrichment when tool or session requirements are hidden in inline mappings.
 
 - Bound verified native snapshots to 2,500 entries on write and read, preventing oversized on-disk metadata from allocating unbounded live BM25 indexes. Failed refreshes preserve prior snapshots.
