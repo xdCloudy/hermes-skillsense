@@ -24,7 +24,7 @@ class NativeRefreshTests(unittest.TestCase):
         from skillsense_test.store import read_native_snapshot,read_index
         from skillsense_test.routing import clear_cache,hint
         allowed={"plugin:diagram":"Generate architecture diagrams for networks"}
-        with patch("skillsense_test.eligibility.native_skill_allowlist",
+        with patch("skillsense_test.eligibility.native_skill_catalogue",
                    return_value=allowed):
             result=self.plugin._refresh_native()
         self.assertIn("1 skills",result)
@@ -33,11 +33,24 @@ class NativeRefreshTests(unittest.TestCase):
         clear_cache()
         self.assertIn("plugin:diagram",hint("plugin:diagram architecture networks")["context"])
 
-    def test_empty_native_result_preserves_existing_catalogue(self):
+    def test_confirmed_empty_native_result_revokes_existing_catalogue(self):
+        from skillsense_test.store import save_native_snapshot, read_native_snapshot
+        from skillsense_test.routing import clear_cache, hint
+        before = {"existing": "Handle Git repository maintenance"}
+        save_native_snapshot(before)
+        with patch("skillsense_test.eligibility.native_skill_catalogue", return_value={}):
+            result = self.plugin._refresh_native()
+        self.assertIn("0 skills", result)
+        self.assertIn("abstain", result)
+        self.assertEqual(read_native_snapshot(), {})
+        clear_cache()
+        self.assertIsNone(hint("existing Git repository maintenance"))
+
+    def test_failed_native_result_preserves_existing_catalogue(self):
         from skillsense_test.store import save_native_snapshot,read_native_snapshot
         before={"existing":"Handle Git repository maintenance"}
         save_native_snapshot(before)
-        with patch("skillsense_test.eligibility.native_skill_allowlist",return_value={}):
+        with patch("skillsense_test.eligibility.native_skill_catalogue",return_value=None):
             with self.assertRaisesRegex(RuntimeError,"existing snapshot preserved"):
                 self.plugin._refresh_native()
         self.assertEqual(read_native_snapshot(),before)
@@ -56,7 +69,7 @@ class NativeRefreshTests(unittest.TestCase):
             sync(conn,[item])
         finally:
             conn.close()
-        with patch("skillsense_test.eligibility.native_skill_allowlist",
+        with patch("skillsense_test.eligibility.native_skill_catalogue",
                    return_value={"existing":"Git repository maintenance"}):
             self.plugin._refresh_native()
         conn=open_db()

@@ -92,12 +92,12 @@ def _refresh_native() -> str:
     Supports installations providing only native/plugin skills and permits an
     explicit cheap refresh after installing new skills or changing profiles.
     """
-    from .eligibility import native_skill_allowlist
+    from .eligibility import native_skill_catalogue
     from .store import open_db, save_native_snapshot, publish_index
     from .routing import clear_cache
-    available = native_skill_allowlist()
-    if not available:
-        raise RuntimeError("No native skills available or Hermes catalogue unavailable; "
+    available = native_skill_catalogue()
+    if available is None:
+        raise RuntimeError("Hermes catalogue unavailable or malformed; "
                            "existing snapshot preserved")
     conn = open_db()
     try:
@@ -107,7 +107,9 @@ def _refresh_native() -> str:
     finally:
         conn.close()
     clear_cache()
-    return f"Refreshed native availability for {len(available)} skills without scanning sources."
+    suffix = " Routing will abstain until skills are available." if not available else ""
+    return (f"Refreshed native availability for {len(available)} skills "
+            f"without scanning sources.{suffix}")
 
 def _clean(args) -> str:
     from pathlib import Path

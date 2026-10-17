@@ -12,21 +12,23 @@ from typing import Any
 import re
 
 
-def native_skill_allowlist() -> dict[str, str]:
-    """Return loadable skill names -> their native descriptions.
+def native_skill_catalogue() -> dict[str, str] | None:
+    """Capture a validated host catalogue, distinguishing failure from empty.
 
-    Empty mapping means no skills can be verified; never fall back to a raw
-    filesystem list. Hermes can legitimately return an empty catalogue.
+    None means Hermes was unreachable or returned an invalid listing; an empty
+    mapping means Hermes explicitly confirmed that no skills are visible.
+    Both states must abstain at runtime, but refreshing a verified empty list
+    must revoke all previously cached load names.
     """
     try:
         from tools.skills_tool import skills_list  # Host-only import.
         raw = skills_list()
         data = json.loads(raw)
         if not isinstance(data, dict) or data.get("success") is not True:
-            return {}
+            return None
         entries = data.get("skills")
         if not isinstance(entries, list):
-            return {}
+            return None
         parsed: list[tuple[str, str]] = []
         for entry in entries:
             if not isinstance(entry, dict):
@@ -42,7 +44,12 @@ def native_skill_allowlist() -> dict[str, str]:
         return {name: desc for name, desc in parsed if duplicates[name] == 1}
     except Exception:
         # A plugin must not break inference if Hermes catalogue access fails.
-        return {}
+        return None
+
+
+def native_skill_allowlist() -> dict[str, str]:
+    """Compatibility adapter: missing and empty both fail closed to no hints."""
+    return native_skill_catalogue() or {}
 
 
 def filter_index_to_native(records: list[dict], available: dict[str, str]) -> list[dict]:
