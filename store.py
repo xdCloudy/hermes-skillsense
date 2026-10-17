@@ -18,6 +18,7 @@ SCHEMA = 1
 # A persisted snapshot is still untrusted after a manual edit or corruption.
 _LOAD_NAME = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_./:-]{0,199}\Z")
 _MAX_CATALOGUE_SKILLS = 2500
+_MAX_INDEX_BYTES = 3_000_000
 
 def data_dir() -> Path:
     try:
@@ -208,10 +209,19 @@ def publish_index(conn: sqlite3.Connection, home: Path | None = None) -> int:
             "intents":list(r["intents"] or []) + list(metadata.get("positive_intents", [])),
             "negative_intents":list(metadata.get("negative_intents", []))
         })
+    # Match the reader's hard bounds BEFORE publication. Multiple partial
+    # root scans can accumulate more sidecar rows than a single 2,500-skill
+    # scan, and approved metadata can exceed the index byte budget.
+    if len(payload) > _MAX_CATALOGUE_SKILLS:
+        raise ValueError("SkillSense index exceeds 2500 skills; reconcile unused roots")
+    encoded = json.dumps({"schema":SCHEMA,"skills":payload},
+                         ensure_ascii=False,separators=(",",":")).encode("utf-8")
+    if len(encoded) > _MAX_INDEX_BYTES:
+        raise ValueError("SkillSense index exceeds 3 MB; reduce approved metadata")
     fd, temporary = tempfile.mkstemp(dir=root, prefix=".index-", suffix=".json")
     try:
-        with os.fdopen(fd,"w",encoding="utf-8") as file:
-            json.dump({"schema":SCHEMA,"skills":payload},file,ensure_ascii=False,separators=(",",":"))
+        with os.fdopen(fd,"wb") as file:
+            file.write(encoded)
             file.flush()
             os.fsync(file.fileno())
         os.replace(temporary,root/"index.json")
@@ -304,7 +314,7 @@ def _valid_index_skill(record: object) -> bool:
 def read_index_status(home: Path | None = None) -> tuple[list[dict], bool]:
     path = (Path(home) if home else data_dir()) / "index.json"
     try:
-        if path.stat().st_size > 3_000_000:
+        if path.stat().st_size > _MAX_INDEX_BYTES:
             return [], False
         value = json.loads(path.read_text(encoding="utf-8"))
         if (not isinstance(value, dict) or value.get("schema") != SCHEMA
