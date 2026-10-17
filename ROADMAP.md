@@ -15,7 +15,7 @@
 
 ## Release blockers
 
-1. [#7 Native session-level skill availability](https://github.com/xdCloudy/hermes-skillsense/issues/7): Hermes can vary skill visibility by project, environment, platform and session, and native plugin-bundled skills are not generally listed by the host's canonical skill index; the present router uses a profile-local canonical snapshot refreshed by explicit maintenance and rechecked periodically; it cannot prove every session's effective visibility.
+1. [#7 Native session-level skill availability](https://github.com/xdCloudy/hermes-skillsense/issues/7): Hermes can vary skill visibility by project, environment, platform and session; current hosts can list native plugin bundles, but listing alone does not prove per-session authorization; the present router uses a profile-local canonical snapshot refreshed by explicit maintenance and rechecked periodically; it cannot prove every session's effective visibility.
 2. [#8 Independently labelled real-world benchmark](https://github.com/xdCloudy/hermes-skillsense/issues/8): authored synthetic fixtures demonstrate functionality but cannot prove production selection accuracy.
 
 ## Longer-term ideas

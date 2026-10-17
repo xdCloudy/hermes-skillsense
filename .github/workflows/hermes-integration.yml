@@ -94,5 +94,60 @@ jobs:
           PY
 
           hermes skillrouter refresh-native | grep -q "Refreshed native availability"
+
+          # Verify the host's CURRENT plugin-skill listing contract, not a
+          # historical assumption about registered native plugin bundles.
+          BUNDLE="$HERMES_HOME/plugins/skill-list-fixture"
+          mkdir -p "$BUNDLE/skills/plugin-catalogue-smoke"
+          cat > "$BUNDLE/plugin.yaml" <<'EOF'
+          name: skill-list-fixture
+          version: 0.0.1
+          manifest_version: 2
+          api_version: 1
+          description: CI fixture for native bundled-skill enumeration
+          author: SkillSense CI
+          license: MIT
+          EOF
+          cat > "$BUNDLE/__init__.py" <<'PY'
+          from pathlib import Path
+
+          def register(ctx):
+              ctx.register_skill(
+                  "plugin-catalogue-smoke",
+                  Path(__file__).parent / "skills" / "plugin-catalogue-smoke" / "SKILL.md")
+          PY
+          cat > "$BUNDLE/skills/plugin-catalogue-smoke/SKILL.md" <<'EOF'
+          ---
+          name: plugin-catalogue-smoke
+          description: Verify native plugin bundled skills are listed when enabled
+          ---
+          # Plugin listing fixture
+          ## When to Use
+          Test namespaced native skill visibility.
+          EOF
+          hermes plugins enable skill-list-fixture
+          hermes skillrouter refresh-native | grep -q "Refreshed native availability"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          home=Path(os.environ["HERMES_HOME"])
+          snapshot=json.loads((home/"plugin-data"/"skillsense"/"native-catalogue.json").read_text())
+          name="skill-list-fixture:plugin-catalogue-smoke"
+          assert name in snapshot["skills"], snapshot["skills"].keys()
+          print("Verified enabled native-plugin bundled skill is discoverable by skills_list.")
+          PY
+
+          hermes plugins disable skill-list-fixture
+          hermes skillrouter refresh-native | grep -q "Refreshed native availability"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          home=Path(os.environ["HERMES_HOME"])
+          snapshot=json.loads((home/"plugin-data"/"skillsense"/"native-catalogue.json").read_text())
+          assert "skill-list-fixture:plugin-catalogue-smoke" not in snapshot["skills"]
+          print("Verified disabled native-plugin bundled skill is not listed.")
+          PY
           hermes skillrouter doctor | grep -q "eligible candidates"
           echo "SkillSense Hermes CLI smoke test passed."
