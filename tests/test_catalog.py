@@ -141,7 +141,12 @@ class CatalogueTests(unittest.TestCase):
                 "metadata:\n  hermes:\n    session_platforms: [telegram]",
                 "metadata:\n  hermes:\n    session_platforms:\n      - telegram",
                 "required_environment_variables: [MY_API_KEY]",
-                "required_environment_variables:\n  - name: MY_API_KEY"
+                "required_environment_variables:\n  - name: MY_API_KEY",
+                "metadata: {hermes: {requires_tools: [web_search]}}",
+                "metadata: {hermes: {fallback_for_tools: [browser]}}",
+                "metadata: {hermes: {session_platforms: [telegram]}}",
+                'metadata: {"hermes": {"requires_toolsets": [browser]}}',
+                "metadata: {'hermes': {'required_environment_variables': [API_KEY]}}"
             )):
                 item=root/f"restricted-{idx}"
                 item.mkdir()

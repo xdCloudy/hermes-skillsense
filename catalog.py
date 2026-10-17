@@ -11,6 +11,19 @@ MAX_SKILL_BYTES = 200_000
 MAX_SKILLS = 2500
 _NAME = re.compile(r"^[a-z][a-z0-9_-]{0,99}$")
 _SAFE = re.compile(r"[\x00-\x1f\x7f-\x9f]+")
+_CONDITIONAL_FIELDS = (
+    "platforms", "requires", "environments", "requires_apps",
+    "requires_toolsets", "requires_tools", "fallback_for_toolsets",
+    "fallback_for_tools", "session_platforms",
+    "required_environment_variables", "requires_env",
+)
+# Block mappings are already handled by the minimal frontmatter parser;
+# additionally catch YAML flow mappings such as metadata: {hermes:
+# {requires_tools: [browser]}} without executing or fully parsing YAML.
+_CONDITIONAL_FLOW = re.compile(
+    r"(?im)(?:^|[{,])\s*['\"]?(?:" + "|".join(_CONDITIONAL_FIELDS) +
+    r")['\"]?\s*:"
+)
 
 @dataclass(frozen=True)
 class Skill:
@@ -35,6 +48,8 @@ def frontmatter(text: str) -> tuple[dict[str, object], str]:
     bound = end.start() + 4
     header, body = text[4:bound], text[bound + len(end.group()):]
     data: dict[str, object] = {}
+    if _CONDITIONAL_FLOW.search(header):
+        data["conditional"] = True
     scope, tags = "", []
     for line in header.splitlines():
         stripped = line.strip()
@@ -49,11 +64,7 @@ def frontmatter(text: str) -> tuple[dict[str, object], str]:
             # incomplete YAML parser; allow only the canonical native entry.
             # A block-form declaration (key: followed by indented values)
             # is still conditional even when the first line is empty.
-            if key in {"platforms", "requires", "environments",
-                       "requires_apps", "requires_toolsets", "requires_tools",
-                       "fallback_for_toolsets", "fallback_for_tools",
-                       "session_platforms", "required_environment_variables",
-                       "requires_env"}:
+            if key in _CONDITIONAL_FIELDS:
                 data["conditional"] = True
             if indent == 0:
                 scope = key
