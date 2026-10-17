@@ -98,7 +98,22 @@ class NativeSnapshotTests(unittest.TestCase):
             raw = json.loads(path.read_text(encoding="utf-8"))
             raw["skills"].update(invalid)
             path.write_text(json.dumps(raw), encoding="utf-8")
-            self.assertEqual(read_native_snapshot(home), valid)
+            self.assertEqual(read_native_snapshot(home), {})
+
+            # Other malformed JSON structures may not selectively grant skills.
+            for mutation in (
+                lambda p: p["skills"].update({"bad space": "invalid"}),
+                lambda p: p["skills"].update({"plugin:skill": ["not a description"]}),
+                lambda p: p.update({"maintenance_incomplete": True}),
+                lambda p: p.update({"captured_at": True}),
+            ):
+                payload = json.loads(file.read_text(encoding="utf-8"))
+                payload["skills"] = dict(valid)
+                payload.pop("maintenance_incomplete", None)
+                payload["captured_at"] = time.time()
+                mutation(payload)
+                file.write_text(json.dumps(payload),encoding="utf-8")
+                self.assertEqual(read_native_snapshot(home), {})
 
     def test_oversized_native_snapshot_never_reaches_hot_path(self):
         from skillsense_test.store import save_native_snapshot, read_native_snapshot

@@ -6,6 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import hashlib
+import math
 import os
 import re
 import sqlite3
@@ -252,20 +253,24 @@ def read_native_snapshot(home: Path | None = None) -> dict[str,str]:
         if file.stat().st_size > 2_000_000:
             return {}
         data = json.loads(file.read_text(encoding="utf-8"))
-        if not isinstance(data,dict) or data.get("schema") != SCHEMA:
+        if (not isinstance(data,dict) or type(data.get("schema")) is not int
+                or data["schema"] != SCHEMA
+                or set(data) != {"schema", "captured_at", "skills"}):
             return {}
-        if not isinstance(data.get("captured_at"),(int,float)):
+        if (type(data.get("captured_at")) not in (int,float)
+                or not math.isfinite(data["captured_at"])):
             return {}
         now=time.time()
         # Never trust snapshots from the future or older than seven days.
         if not 0 <= now-data["captured_at"] <= 7*86400:
             return {}
         rows=data.get("skills")
-        if not isinstance(rows,dict) or len(rows) > _MAX_CATALOGUE_SKILLS:
+        if (not isinstance(rows,dict) or len(rows) > _MAX_CATALOGUE_SKILLS
+                or any(not isinstance(name,str) or not _LOAD_NAME.fullmatch(name)
+                       or not isinstance(desc,str) or len(desc) > 1024
+                       for name,desc in rows.items())):
             return {}
-        return {name:desc for name,desc in rows.items()
-                if isinstance(name,str) and _LOAD_NAME.fullmatch(name)
-                and isinstance(desc,str) and len(desc) <= 1024}
+        return rows
     except (OSError,ValueError,TypeError,AttributeError):
         return {}
 
