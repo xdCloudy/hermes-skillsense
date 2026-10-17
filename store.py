@@ -224,7 +224,8 @@ def save_native_snapshot(available: dict[str, str], home: Path | None = None) ->
     """Persist a canonical Hermes catalogue from the local CLI rebuild.
 
     The isolated plugin host does not need Hermes internal imports at all.
-    A failed/empty capture deliberately replaces the old snapshot.
+    Call only after a successful Hermes listing, including verified emptiness.
+    Failed catalogue lookups must leave an older snapshot untouched.
     """
     root = Path(home) if home else data_dir()
     root.mkdir(parents=True,exist_ok=True)

@@ -63,10 +63,24 @@ def _diagnostics() -> str:
             f"{len(allowed)} native-available, {len(verified)} eligible candidates. "
             "No model is used for normal routing.")
 
+def _capture_native_if_verified() -> bool:
+    """Only successful Hermes listings, including empty ones, replace snapshot.
+
+    A failed host import or malformed reply must not be misrepresented as a
+    verified empty catalogue, especially during an unrelated index rebuild.
+    """
+    from .eligibility import native_skill_catalogue
+    from .store import save_native_snapshot
+    available = native_skill_catalogue()
+    if available is None:
+        return False
+    save_native_snapshot(available)
+    return True
+
+
 def _rebuild(args) -> str:
     from .catalog import scan_skills
-    from .store import open_db, sync, publish_index, save_native_snapshot
-    from .eligibility import native_skill_allowlist
+    from .store import open_db, sync, publish_index
     from .routing import clear_cache
     roots = _root(args)
     for root in roots:
@@ -79,12 +93,17 @@ def _rebuild(args) -> str:
     conn = open_db()
     try:
         result = sync(conn, skills, roots=roots)
-        save_native_snapshot(native_skill_allowlist())
         publish_index(conn)
+        native_refreshed = _capture_native_if_verified()
     finally:
         conn.close()
         clear_cache()
-    return f"Rebuilt index: {result['total']} skills ({result['added']} new; {result['changed']} changed)."
+    warning = ("" if native_refreshed else
+               " Hermes catalogue unavailable; previous native snapshot retained "
+               "(if present), subject to its normal expiry. Run 'refresh-native' "
+               "to retry.")
+    return (f"Rebuilt index: {result['total']} skills "
+            f"({result['added']} new; {result['changed']} changed)." + warning)
 
 def _refresh_native() -> str:
     """Refresh canonical skill availability without scanning or changing SKILL.md.
@@ -114,8 +133,7 @@ def _refresh_native() -> str:
 def _clean(args) -> str:
     from pathlib import Path
     from .catalog import scan_skills
-    from .store import open_db, sync, rows, stage, publish_index, save_native_snapshot
-    from .eligibility import native_skill_allowlist
+    from .store import open_db, sync, rows, stage, publish_index
     from .local_model import enrich, endpoint
     from .routing import clear_cache
     roots = _root(args)
@@ -176,17 +194,21 @@ def _clean(args) -> str:
                 counts["proposed"] += int(stage(conn,skill.identity,skill.sha256,proposal))
             except Exception:
                 counts["failed"] += 1
-        save_native_snapshot(native_skill_allowlist())
+        native_refreshed = _capture_native_if_verified()
     finally:
         conn.close()
         clear_cache()
+    native_warning = ("" if native_refreshed else
+                      " Hermes catalogue unavailable; previous native snapshot "
+                      "retained (if present), subject to its normal expiry. "
+                      "Run 'refresh-native' to retry.")
     notice = (f" Batched model calls: {len(selected)}/{batch_size}; "
               f"{deferred} eligible outside this batch (offset {offset}). "
               "Run again for the next batch; use --offset with --force to page.")
     return (f"Audit completed: {len(skills)} scanned, {counts['proposed']} pending review, "
             f"{counts['skipped']} reused/skipped, {counts['failed']} failed."
             + (notice if with_model else "") +
-            " Original SKILL.md files unchanged.")
+            " Original SKILL.md files unchanged." + native_warning)
 
 def _review(args) -> str:
     from .store import open_db, rows, decide, publish_index

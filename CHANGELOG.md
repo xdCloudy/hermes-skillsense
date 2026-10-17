@@ -4,6 +4,8 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Preserve a previous native eligibility snapshot when Hermes catalogue lookup fails during `rebuild` or non-dry-run `clean --audit`, mirroring `refresh-native`; verified-empty results still revoke prior names, and maintenance reports warnings.
+
 - Clear per-session duplicate-hint suppression whenever the router cache is explicitly invalidated, so catalogue changes do not leave stale five-minute suppression behind.
 
 - Publish the reconciled approved index before optional long-running local-model audit requests, avoiding needless native-only fallback throughout the audit; pending proposals still require explicit approval.

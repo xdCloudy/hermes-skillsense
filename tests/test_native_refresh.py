@@ -55,6 +55,71 @@ class NativeRefreshTests(unittest.TestCase):
                 self.plugin._refresh_native()
         self.assertEqual(read_native_snapshot(),before)
 
+    def test_rebuild_preserves_snapshot_when_host_lookup_fails(self):
+        import argparse
+        from skillsense_test.store import save_native_snapshot, read_native_snapshot
+        existing = {"original": "Inspect known user workflows"}
+        save_native_snapshot(existing)
+        root = Path(self.temp.name) / "skills" / "sample"
+        root.mkdir(parents=True)
+        (root / "SKILL.md").write_text(
+            "---\nname: sample\ndescription: Inspect sample workflows\n---\n",
+            encoding="utf-8")
+        with patch("skillsense_test.eligibility.native_skill_catalogue",
+                   return_value=None):
+            result = self.plugin._rebuild(argparse.Namespace(roots=[str(root.parent)]))
+        self.assertIn("previous native snapshot retained", result)
+        self.assertEqual(read_native_snapshot(), existing)
+
+    def test_rebuild_verified_empty_revokes_previous_snapshot(self):
+        import argparse
+        from skillsense_test.store import save_native_snapshot, read_native_snapshot
+        save_native_snapshot({"old-skill": "No longer installed"})
+        root = Path(self.temp.name) / "skills" / "sample"
+        root.mkdir(parents=True)
+        (root / "SKILL.md").write_text(
+            "---\nname: sample\ndescription: Inspect sample workflows\n---\n",
+            encoding="utf-8")
+        with patch("skillsense_test.eligibility.native_skill_catalogue",
+                   return_value={}):
+            result = self.plugin._rebuild(argparse.Namespace(roots=[str(root.parent)]))
+        self.assertIn("Rebuilt index", result)
+        self.assertEqual(read_native_snapshot(), {})
+
+    def test_clean_preserves_snapshot_when_host_lookup_fails(self):
+        import argparse
+        from skillsense_test.store import save_native_snapshot, read_native_snapshot
+        existing = {"old-skill": "Maintain local applications"}
+        save_native_snapshot(existing)
+        root = Path(self.temp.name) / "skills" / "sample"
+        root.mkdir(parents=True)
+        (root / "SKILL.md").write_text(
+            "---\nname: sample\ndescription: Inspect sample workflows\n---\n",
+            encoding="utf-8")
+        with patch("skillsense_test.eligibility.native_skill_catalogue",
+                   return_value=None):
+            result = self.plugin._clean(argparse.Namespace(
+                roots=[str(root.parent)], model="none", dry_run=False,
+                force=False, endpoint=None, model_id=None))
+        self.assertIn("previous native snapshot retained", result)
+        self.assertEqual(read_native_snapshot(), existing)
+
+    def test_clean_verified_empty_revokes_previous_snapshot(self):
+        import argparse
+        from skillsense_test.store import save_native_snapshot, read_native_snapshot
+        save_native_snapshot({"old-skill": "No longer installed"})
+        root = Path(self.temp.name) / "skills" / "sample"
+        root.mkdir(parents=True)
+        (root / "SKILL.md").write_text(
+            "---\nname: sample\ndescription: Inspect sample workflows\n---\n",
+            encoding="utf-8")
+        with patch("skillsense_test.eligibility.native_skill_catalogue",
+                   return_value={}):
+            self.plugin._clean(argparse.Namespace(
+                roots=[str(root.parent)], model="none", dry_run=False,
+                force=False, endpoint=None, model_id=None))
+        self.assertEqual(read_native_snapshot(), {})
+
     def test_refresh_does_not_remove_cached_approved_data(self):
         from skillsense_test.store import open_db,sync,rows
         from skillsense_test.catalog import Skill
