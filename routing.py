@@ -115,10 +115,15 @@ def get_router() -> Router:
     return _cache
 
 def clear_cache() -> None:
+    """Discard a router revision and its old session hint-suppression history."""
     global _cache, _cache_refreshed
     with _lock:
         _cache = None
         _cache_refreshed = 0.0
+    # Once a skill catalogue/approval changes, an identical-looking hint may
+    # be valid again. Invalidate stale suppression entries too.
+    with _recent_lock:
+        _recent.clear()
 
 def hint(user_message: str, max_suggestions: int = 2, session_id: str = "") -> dict | None:
     try:

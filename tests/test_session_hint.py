@@ -42,3 +42,18 @@ class HintTests(unittest.TestCase):
                 self.assertNotIn(session, mod._recent)
         with mod._recent_lock:
             mod._recent.clear()
+
+    def test_cache_invalidation_releases_previous_hint_suppression(self):
+        import skillsense_test.routing as mod
+        from unittest.mock import patch
+        router = mod.Router([{"id":"one","name":"android-re",
+                             "description":"APK reverse engineering",
+                             "tags":["android","apk"],"aliases":[],"intents":[]}])
+        mod.clear_cache()
+        with patch.object(mod,"get_router",return_value=router):
+            first = mod.hint("android-re APK",session_id="session-one")
+            self.assertIsNotNone(first)
+            self.assertIsNone(mod.hint("android-re APK",session_id="session-one"))
+            mod.clear_cache()
+            self.assertEqual(mod.hint("android-re APK",session_id="session-one"), first)
+        mod.clear_cache()
