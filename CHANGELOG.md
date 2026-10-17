@@ -4,6 +4,9 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Invalidate the published JSON index before SQLite updates that can change approved routing metadata, preventing stale disk hints when maintenance is interrupted; ensure cleanup invalidates in-process caches even on errors.
+- Restore test discovery for the previously misplaced opt-in empty-root reconciliation regression.
+
 - Fixed the offline Recall@3 sample to evaluate three eligible suggestions; runtime can now honour an explicit maximum of three while retaining its default two-hint limit and conservative evidence gates.
 - Added opt-in `rebuild --allow-empty` to safely reconcile completely emptied trusted skill roots without pruning unrelated sidecar data.
 - Validate persisted index records (including field types, size bounds and unique IDs) before routing; fall back to native-only metadata on malformed enrichment.

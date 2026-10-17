@@ -83,7 +83,7 @@ def _rebuild(args) -> str:
         publish_index(conn)
     finally:
         conn.close()
-    clear_cache()
+        clear_cache()
     return f"Rebuilt index: {result['total']} skills ({result['added']} new; {result['changed']} changed)."
 
 def _refresh_native() -> str:
@@ -115,6 +115,7 @@ def _clean(args) -> str:
     from .store import open_db, sync, rows, stage, publish_index, save_native_snapshot
     from .eligibility import native_skill_allowlist
     from .local_model import enrich, endpoint
+    from .routing import clear_cache
     roots = _root(args)
     if any(not root.is_dir() for root in roots):
         raise ValueError("All supplied skill roots must be readable directories")
@@ -172,6 +173,7 @@ def _clean(args) -> str:
         save_native_snapshot(native_skill_allowlist())
     finally:
         conn.close()
+        clear_cache()
     notice = (f" Batched model calls: {len(selected)}/{batch_size}; "
               f"{deferred} eligible outside this batch (offset {offset}). "
               "Run again for the next batch; use --offset with --force to page.")
@@ -214,6 +216,7 @@ def _review(args) -> str:
         return f"{'Approved' if action == 'approve' else 'Rejected'} proposal for {matches[0]['name']}."
     finally:
         conn.close()
+        clear_cache()
 
 def _configure(args, ctx=None) -> str:
     from .store import data_dir

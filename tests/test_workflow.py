@@ -146,9 +146,6 @@ class WorkflowTests(unittest.TestCase):
                 roots=None,model="aux",dry_run=False,force=False,
                 endpoint="https://openrouter.ai/v1/chat/completions",model_id="remote"))
 
-if __name__=="__main__":
-    unittest.main()
-
     def test_opt_in_empty_rebuild_reconciles_only_requested_root(self):
         from skillsense_test.store import open_db, rows, read_index
         from unittest.mock import patch
@@ -186,3 +183,6 @@ if __name__=="__main__":
             finally:
                 conn.close()
         self.assertTrue((other / "SKILL.md").is_file())
+
+if __name__ == "__main__":
+    unittest.main()
