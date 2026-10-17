@@ -4,6 +4,7 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Reject entire partially malformed native catalogues on read (including unexpected envelope fields, invalid load names/descriptions, and non-finite timestamps) instead of trusting a silently filtered subset.
 - Distinguish a verified empty Hermes skill list from unavailable/malformed host responses during `refresh-native`: clear stale availability after successful empty lookups, preserve the previous snapshot on errors.
 
 - Catch conditional Hermes skill fields inside compact YAML flow maps, avoiding accidental sidecar enrichment when tool or session requirements are hidden in inline mappings.
