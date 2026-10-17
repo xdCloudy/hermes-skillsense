@@ -62,7 +62,7 @@ class WorkflowTests(unittest.TestCase):
         from unittest.mock import patch
         from skillsense_test.store import read_native_snapshot
         available={"android-re":"Inspect Android APK decompilation"}
-        with patch("skillsense_test.eligibility.native_skill_allowlist",
+        with patch("skillsense_test.eligibility.native_skill_catalogue",
                    return_value=available):
             result=self.plugin._clean(argparse.Namespace(
                 roots=None, model="none",dry_run=False,force=False,
@@ -156,7 +156,7 @@ class WorkflowTests(unittest.TestCase):
         (other / "SKILL.md").write_text(
             "---\nname: secondary\ndescription: Manage secondary workflows\n---\n",
             encoding="utf-8")
-        with patch("skillsense_test.eligibility.native_skill_allowlist",
+        with patch("skillsense_test.eligibility.native_skill_catalogue",
                    return_value={"secondary":"Manage secondary workflows"}):
             self.plugin._rebuild(argparse.Namespace(roots=[str(primary),str(secondary)]))
             conn=open_db()
