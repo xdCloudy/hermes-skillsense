@@ -4,6 +4,8 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Bounded and hashed session deduplication keys; avoid retaining raw/oversized host session IDs in the process-global hint cache.
+
 - Secure existing sidecar directories to 0700 on POSIX, shielding SQLite WAL/SHM files on older profiles; reject final directory symlinks where supported.
 
 - Restricted SQLite sidecar creation to owner-only permissions on POSIX, repairing old overly permissive database files and refusing final-path symlinks where O_NOFOLLOW is supported.

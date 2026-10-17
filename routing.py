@@ -100,7 +100,7 @@ _cache_refreshed = 0.0
 _CACHE_REFRESH_SECONDS = 60.0
 _lock = threading.Lock()
 _recent_lock = threading.Lock()
-_recent: dict[str, tuple[str,float]] = {}
+_recent: dict[bytes, tuple[str,float]] = {}
 
 def get_router() -> Router:
     """Recheck index/snapshot once a minute; never trust expired eligibility forever."""
@@ -125,16 +125,20 @@ def hint(user_message: str, max_suggestions: int = 2, session_id: str = "") -> d
         value = get_router().suggest(user_message, max_suggestions)
         if not value:
             return None
-        if session_id:
+        # Never retain raw session identifiers in process-global cache keys.
+        # Host-supplied IDs must be reasonably bounded strings; otherwise omit
+        # deduplication rather than stringify arbitrary or huge values.
+        if isinstance(session_id, str) and 0 < len(session_id) <= 256:
+            key = hashlib.sha256(session_id.encode("utf-8")).digest()
             fingerprint = hashlib.sha256(value.encode("utf-8")).hexdigest()
             now = time.monotonic()
             with _recent_lock:
-                old = _recent.get(str(session_id))
+                old = _recent.get(key)
                 if old and old[0] == fingerprint and now - old[1] < 300:
                     return None
                 if len(_recent) >= 256:
                     _recent.clear()
-                _recent[str(session_id)] = (fingerprint, now)
+                _recent[key] = (fingerprint, now)
         return {"context": value}
     except Exception:
         # A broken cache must never fail a Hermes turn.
