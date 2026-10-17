@@ -47,10 +47,40 @@ def open_db(home: Path | None = None) -> sqlite3.Connection:
         db.execute("PRAGMA user_version=1")
     return db
 
+def _invalidate_published_index(conn: sqlite3.Connection) -> None:
+    """Fail closed before mutations that can change active retrieval metadata.
+
+    SQLite commits and an atomic JSON rename cannot be one transaction. Mark
+    the old index unusable *before* changing database state; a crash, publish
+    failure or partial maintenance then leaves native-only routing rather than
+    continuing to serve revoked aliases.
+    """
+    db_path = next((path for _, name, path in conn.execute("PRAGMA database_list")
+                    if name == "main"), "")
+    if not db_path:
+        raise RuntimeError("Cannot determine SkillSense sidecar location")
+    root = Path(db_path).parent
+    target = root / "index.json"
+    if not target.exists():
+        return
+    fd, temporary = tempfile.mkstemp(dir=root, prefix=".index-dirty-", suffix=".json")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump({"schema": SCHEMA, "skills": [], "maintenance_incomplete": True},
+                      stream, separators=(",", ":"))
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, target)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
 def sync(conn: sqlite3.Connection, skills: list, roots: list[Path] | None = None) -> dict[str, int]:
     """Upsert changed files; prune only within explicitly scanned complete roots."""
     changed, added, current = 0, 0, {skill.identity for skill in skills}
     with conn:
+        _invalidate_published_index(conn)
         for item in skills:
             row = conn.execute("SELECT source_hash FROM skills WHERE id=?", (item.identity,)).fetchone()
             if row is None:
@@ -100,6 +130,7 @@ def decide(conn: sqlite3.Connection, identity: str, approve: bool) -> bool:
         row = conn.execute("SELECT pending,path,source_hash FROM skills WHERE id=?", (identity,)).fetchone()
         if row is None or not row["pending"]:
             return False
+        _invalidate_published_index(conn)
         # Either decision may affect an existing approved proposal. If the
         # source changed, revoke stale enrichment before *approval or rejection*.
         try:
@@ -235,7 +266,8 @@ def read_index_status(home: Path | None = None) -> tuple[list[dict], bool]:
         if path.stat().st_size > 3_000_000:
             return [], False
         value = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(value, dict) or value.get("schema") != SCHEMA:
+        if (not isinstance(value, dict) or value.get("schema") != SCHEMA
+                or set(value) != {"schema", "skills"}):
             return [], False
         records = value.get("skills")
         # Never accept a truncated catalogue: it could remove valid matches

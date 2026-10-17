@@ -155,3 +155,72 @@ class StoreTests(unittest.TestCase):
                                          "skills": [dict(row, id=str(i)) for i in range(2501)]}),
                              encoding="utf-8")
             self.assertEqual(read_index(home), [])
+
+    def test_sync_dirties_old_index_before_database_source_revisions(self):
+        from skillsense_test.catalog import Skill
+        from skillsense_test.store import (open_db, sync, stage, decide,
+                                          publish_index, read_index_status, rows)
+        from skillsense_test.eligibility import compose_native_records
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            source = home / "SKILL.md"
+            source.write_text("original", encoding="utf-8")
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            native = {"android-re": "Inspect APKs"}
+            conn = open_db(home)
+            try:
+                original = Skill("one", "android-re", "Inspect APKs", (), (),
+                                 str(source), digest)
+                sync(conn, [original])
+                stage(conn, "one", digest,
+                      {"description": "Inspect APKs", "aliases": ["old unique alias"]})
+                self.assertTrue(decide(conn, "one", True))
+                publish_index(conn, home)
+                self.assertTrue(read_index_status(home)[1])
+                self.assertEqual(read_index_status(home)[0][0]["aliases"], ["old unique alias"])
+
+                source.write_text("changed", encoding="utf-8")
+                replacement = Skill("one", "android-re", "Inspect APKs", (), (),
+                                    str(source), hashlib.sha256(source.read_bytes()).hexdigest())
+                # Simulate a process crash/failed publish after the DB update.
+                sync(conn, [replacement])
+                records, valid = read_index_status(home)
+                self.assertFalse(valid)
+                self.assertEqual(records, [])
+                self.assertIsNone(rows(conn)[0]["approved"])
+                fallback = compose_native_records(records, native)
+                self.assertEqual(fallback[0]["aliases"], [])
+                publish_index(conn, home)
+                self.assertTrue(read_index_status(home)[1])
+                self.assertEqual(read_index_status(home)[0][0]["aliases"], [])
+            finally:
+                conn.close()
+
+    def test_unpublished_rejection_cannot_leave_old_alias_available(self):
+        from skillsense_test.catalog import Skill
+        from skillsense_test.store import (open_db, sync, stage, decide,
+                                          publish_index, read_index_status)
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            source = home / "SKILL.md"
+            source.write_text("same file", encoding="utf-8")
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            conn = open_db(home)
+            try:
+                skill = Skill("one", "android-re", "Inspect APKs", (), (),
+                              str(source), digest)
+                sync(conn, [skill])
+                stage(conn, "one", digest,
+                      {"description": "Inspect APKs", "aliases": ["previous alias"]})
+                self.assertTrue(decide(conn, "one", True))
+                publish_index(conn, home)
+                self.assertTrue(read_index_status(home)[1])
+                stage(conn, "one", digest,
+                      {"description": "New proposal"})
+                self.assertTrue(decide(conn, "one", False))
+                # No publish_index: a crash must leave no valid stale index.
+                self.assertFalse(read_index_status(home)[1])
+                publish_index(conn, home)
+                self.assertTrue(read_index_status(home)[1])
+            finally:
+                conn.close()
