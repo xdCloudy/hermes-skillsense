@@ -15,7 +15,7 @@ A lightweight, local-first skill router for [Hermes Agent](https://github.com/No
 </div>
 
 > [!IMPORTANT]
-> **Project status: experimental implementation (v0.2.2), not certified production-ready.** The BM25 router, read-only skill scanner, SQLite sidecar, review commands and strictly local metadata-audit transport are implemented. They are **opt-in**; normal skill hints are disabled until enabled through the CLI. An isolated real-Hermes installation has passed plugin doctor, validation, and CLI lifecycle smoke tests. **Session-dependent skill-eligibility parity ([#7](https://github.com/xdCloudy/hermes-skillsense/issues/7)) and an independent held-out selection-quality evaluation ([#8](https://github.com/xdCloudy/hermes-skillsense/issues/8)) remain stable-release blockers.** Hermes' canonical `skills_list()` is captured during explicit catalogue maintenance; normal turns consume a local snapshot with native-only fallback entries for skills that appear in that list (not every native plugin-bundled skill does), without model or catalogue API calls.
+> **Project status: experimental implementation (v0.2.2), not certified production-ready.** The BM25 router, read-only skill scanner, SQLite sidecar, review commands and strictly local metadata-audit transport are implemented. They are **opt-in**; normal skill hints are disabled until enabled through the CLI. An isolated real-Hermes installation has passed plugin doctor, validation, and CLI lifecycle smoke tests. **Session-dependent skill-eligibility parity ([#7](https://github.com/xdCloudy/hermes-skillsense/issues/7)) and an independent held-out selection-quality evaluation ([#8](https://github.com/xdCloudy/hermes-skillsense/issues/8)) remain stable-release blockers.** Hermes' canonical `skills_list()` is captured during explicit catalogue maintenance; normal turns consume a local snapshot with native-only fallback entries for skills that Hermes currently lists (including enabled native-plugin bundles on compatible host versions), without model or catalogue API calls.
 
 ## Why SkillSense?
 
@@ -136,8 +136,9 @@ The default scan covers `$HERMES_HOME/skills` (or `~/.hermes/skills`). Extra tru
 ### Refresh skills visible in Hermes' canonical list
 
 For profiles without a local `skills/` directory, `refresh-native` can still
-index any skills that Hermes actually returns through `skills_list()` (for
-example, supported portable plugin-package skills):
+index any skills actually returned through Hermes' `skills_list()`. Current
+Hermes source also includes enabled, registered native-plugin bundles alongside
+supported portable plugin-package skills (verify against the installed host):
 
 ```bash
 hermes skillrouter refresh-native
@@ -146,10 +147,11 @@ hermes skillrouter enable
 
 This refreshes Hermes' canonical availability snapshot, preserves existing
 approved metadata, and creates an empty sidecar index if necessary.
-**Native-plugin bundled skills registered through `ctx.register_skill()` are
-normally absent from `skills_list()` and are not automatically discovered
-by SkillSense.** This is a documented host limitation, not a claim that they
-are unavailable to Hermes via explicit `skill_view("plugin:skill")`.
+Native-plugin bundled skills registered with `ctx.register_skill()` can
+appear as qualified `plugin:skill` entries on current Hermes hosts; the Hermes
+integration workflow tests their appearance on enable and removal on disable.
+**SkillSense only routes names actually returned by its host**, and its
+profile-scoped snapshot still cannot prove session-specific visibility.
 It never reads or modifies `SKILL.md` files and makes no model calls.
 An empty/unavailable host catalogue is an error and preserves the previous snapshot.
 Existing Hermes sessions may need a restart after changing routing settings.
