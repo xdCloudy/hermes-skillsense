@@ -4,6 +4,7 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Bound verified native snapshots to 2,500 entries on write and read, preventing oversized on-disk metadata from allocating unbounded live BM25 indexes. Failed refreshes preserve prior snapshots.
 - Bounded and hashed session deduplication keys; avoid retaining raw/oversized host session IDs in the process-global hint cache.
 
 - Secure existing sidecar directories to 0700 on POSIX, shielding SQLite WAL/SHM files on older profiles; reject final directory symlinks where supported.
