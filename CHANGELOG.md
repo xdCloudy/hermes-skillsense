@@ -4,6 +4,8 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Enforce the runtime index reader's 2,500-record and 3 MB limits in the atomic JSON publisher, failing with actionable errors instead of publishing an unreadable oversized index.
+
 - Validate every canonical Hermes listing entry and bound host response size/count before accepting catalogue updates; reject partial, duplicate or malformed successful responses instead of mistaking them for verified emptiness.
 
 - Preserve a previous native eligibility snapshot when Hermes catalogue lookup fails during `rebuild` or non-dry-run `clean --audit`, mirroring `refresh-native`; verified-empty results still revoke prior names, and maintenance reports warnings.

@@ -299,3 +299,51 @@ class StoreTests(unittest.TestCase):
             with self.assertRaises(OSError):
                 open_db(linked)
             self.assertEqual(stat.S_IMODE(protected.stat().st_mode), 0o755)
+
+    def test_publisher_refuses_more_records_than_reader_accepts(self):
+        from unittest.mock import patch
+        from skillsense_test.store import open_db, publish_index, read_index_status
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            conn = open_db(home)
+            try:
+                publish_index(conn, home)
+                original = (home / "index.json").read_bytes()
+                rows = [
+                    {"id":f"item-{i}","name":f"item-{i}",
+                     "description":"Inspect example workflows",
+                     "approved":None,"tags":[],"intents":[]}
+                    for i in range(2501)
+                ]
+                with patch("skillsense_test.store.rows", return_value=rows):
+                    with self.assertRaisesRegex(ValueError, "exceeds 2500"):
+                        publish_index(conn, home)
+                self.assertEqual((home / "index.json").read_bytes(), original)
+                self.assertTrue(read_index_status(home)[1])
+            finally:
+                conn.close()
+
+    def test_publisher_refuses_oversized_json_before_replacing_index(self):
+        from unittest.mock import patch
+        from skillsense_test.store import open_db, publish_index, read_index_status
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            conn = open_db(home)
+            try:
+                publish_index(conn, home)
+                original = (home / "index.json").read_bytes()
+                # All individual tag strings are reader-valid, yet the total
+                # encoded index would exceed 3 MB.
+                rows = [
+                    {"id":f"item-{i}","name":f"item-{i}",
+                     "description":"Inspect example workflows",
+                     "approved":None,"tags":["x"*1000]*22,"intents":[]}
+                    for i in range(150)
+                ]
+                with patch("skillsense_test.store.rows", return_value=rows):
+                    with self.assertRaisesRegex(ValueError, "exceeds 3 MB"):
+                        publish_index(conn, home)
+                self.assertEqual((home / "index.json").read_bytes(), original)
+                self.assertTrue(read_index_status(home)[1])
+            finally:
+                conn.close()
