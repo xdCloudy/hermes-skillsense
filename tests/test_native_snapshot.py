@@ -99,3 +99,22 @@ class NativeSnapshotTests(unittest.TestCase):
             raw["skills"].update(invalid)
             path.write_text(json.dumps(raw), encoding="utf-8")
             self.assertEqual(read_native_snapshot(home), valid)
+
+    def test_oversized_native_snapshot_never_reaches_hot_path(self):
+        from skillsense_test.store import save_native_snapshot, read_native_snapshot
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            previous = {"android-re": "Inspect APK decompilation"}
+            save_native_snapshot(previous, home)
+            very_large = {f"skill-{i}": "Small" for i in range(2501)}
+            with self.assertRaisesRegex(ValueError, "exceeds 2500"):
+                save_native_snapshot(very_large, home)
+            self.assertEqual(read_native_snapshot(home), previous)
+
+            # A valid-looking but tampered JSON file must also fail closed,
+            # rather than loading thousands of records into the live BM25 index.
+            file = home / "native-catalogue.json"
+            payload = json.loads(file.read_text(encoding="utf-8"))
+            payload["skills"] = very_large
+            file.write_text(json.dumps(payload), encoding="utf-8")
+            self.assertEqual(read_native_snapshot(home), {})

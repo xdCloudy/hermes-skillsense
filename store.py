@@ -16,6 +16,7 @@ SCHEMA = 1
 # Mirror the canonical adapter's accepted Hermes load-name alphabet.
 # A persisted snapshot is still untrusted after a manual edit or corruption.
 _LOAD_NAME = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_./:-]{0,199}\Z")
+_MAX_CATALOGUE_SKILLS = 2500
 
 def data_dir() -> Path:
     try:
@@ -229,6 +230,8 @@ def save_native_snapshot(available: dict[str, str], home: Path | None = None) ->
     valid = {name:desc for name,desc in available.items()
              if isinstance(name,str) and _LOAD_NAME.fullmatch(name)
              and isinstance(desc,str) and len(desc) <= 1024}
+    if len(valid) > _MAX_CATALOGUE_SKILLS:
+        raise ValueError("Canonical Hermes skill catalogue exceeds 2500 entries")
     fd, tmp = tempfile.mkstemp(dir=root,prefix=".native-",suffix=".json")
     try:
         with os.fdopen(fd,"w",encoding="utf-8") as stream:
@@ -258,7 +261,7 @@ def read_native_snapshot(home: Path | None = None) -> dict[str,str]:
         if not 0 <= now-data["captured_at"] <= 7*86400:
             return {}
         rows=data.get("skills")
-        if not isinstance(rows,dict):
+        if not isinstance(rows,dict) or len(rows) > _MAX_CATALOGUE_SKILLS:
             return {}
         return {name:desc for name,desc in rows.items()
                 if isinstance(name,str) and _LOAD_NAME.fullmatch(name)
@@ -304,7 +307,7 @@ def read_index_status(home: Path | None = None) -> tuple[list[dict], bool]:
         records = value.get("skills")
         # Never accept a truncated catalogue: it could remove valid matches
         # while leaving stale enrichment for unexamined records.
-        if (not isinstance(records, list) or len(records) > 2500
+        if (not isinstance(records, list) or len(records) > _MAX_CATALOGUE_SKILLS
                 or not all(_valid_index_skill(record) for record in records)):
             return [], False
         identities = [record["id"] for record in records]
