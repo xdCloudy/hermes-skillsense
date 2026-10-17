@@ -18,7 +18,7 @@ hermes skillrouter disable
 
 ## Build or refresh the catalogue
 
-`rebuild` scans the Hermes user's `skills` directory by default, or explicitly trusted `--root` directories. It preserves unrelated roots' metadata. For an installation without local SKILL.md files, `refresh-native` can use skills explicitly returned by the canonical `skills_list()` API, without scanning skill files or invoking a model. A **successful empty listing** revokes the previous snapshot so routing abstains rather than continuing to hint removed skills; a failed or malformed host listing refuses the refresh and preserves the previous snapshot. Likewise, `rebuild` and non-dry-run `clean --audit` preserve any prior unexpired native snapshot when the host listing is unavailable, while still completing the local index maintenance and displaying a warning. Native-plugin bundled skills omitted by that API are not discovered here; their explicit `skill_view("plugin:skill")` loading remains a Hermes capability.
+`rebuild` scans the Hermes user's `skills` directory by default, or explicitly trusted `--root` directories. It preserves unrelated roots' metadata. For an installation without local SKILL.md files, `refresh-native` can use skills explicitly returned by the canonical `skills_list()` API, without scanning skill files or invoking a model. A **successful empty listing** revokes the previous snapshot so routing abstains rather than continuing to hint removed skills; a failed or malformed host listing refuses the refresh and preserves the previous snapshot. Likewise, `rebuild` and non-dry-run `clean --audit` preserve any prior unexpired native snapshot when the host listing is unavailable, while still completing the local index maintenance and displaying a warning. Recent Hermes host versions can include enabled, registered native-plugin bundles in this API; SkillSense only routes names actually listed. Explicit `skill_view("plugin:skill")` remains a native Hermes capability, not an authorization granted by this snapshot.
 
 If a previously indexed trusted root becomes empty (all its skills were removed
 or no longer pass the conservative scan), `rebuild` refuses the zero-result
@@ -42,7 +42,9 @@ A valid local index must exist before routing is enabled. Restart existing Herme
 
 The HTTP client rejects remote destinations, hostnames, redirects and configured HTTP proxies; it has no provider fallback. A server on loopback may itself forward requests externally. Verify the serving model really is local and its external fallbacks are disabled. Best-effort masking of common credentials is not a comprehensive secret detector.
 
-Local inference is **bounded to 10 requests per invocation by default** (configurable with `--max-inferences N`, 1–50). Running the command again skips pending/approved/rejected skills and continues with remaining candidates. Use `--offset N` when a `--force` audit needs explicit pagination, or to bypass repeatedly failing skills. `--dry-run` makes no inference calls and does not require a model endpoint.\n\nAll generated metadata is **pending** until `review approve`. A changed source invalidates a stale approval. No maintenance command overwrites a SKILL.md source.
+Local inference is **bounded to 10 requests per invocation by default** (configurable with `--max-inferences N`, 1–50). Running the command again skips pending/approved/rejected skills and continues with remaining candidates. Use `--offset N` when a `--force` audit needs explicit pagination, or to bypass repeatedly failing skills. `--dry-run` makes no inference calls and does not require a model endpoint.
+
+All generated metadata is **pending** until `review approve`. A changed source invalidates a stale approval. No maintenance command overwrites a SKILL.md source.
 
 ## Doctor and slash command
 

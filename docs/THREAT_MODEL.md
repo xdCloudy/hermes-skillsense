@@ -30,6 +30,8 @@ Private skills, Hermes user profile, auth tokens, local inference endpoint, side
 
 ## Security invariants
 
-Before the optional audit call, SkillSense performs **best-effort** masking of common private-key blocks, bearer tokens, API keys and credential assignments. This is not comprehensive secret detection; users should review skill text and verify their inference server.\n\nNormal turns perform no network/model calls and ideally no disk writes. The optional audit sends skill text only to an explicit numeric loopback endpoint (with proxy/redirect bypass), but cannot attest that the receiving process will not forward it. Originals are never modified. Any uncertain state fails to "no suggestion" or refuses the audit, without breaking Hermes.
+Before the optional audit call, SkillSense performs **best-effort** masking of common private-key blocks, bearer tokens, API keys and credential assignments. This is not comprehensive secret detection; users should review skill text and verify their inference server.
+
+Normal turns perform no network/model calls and ideally no disk writes. The optional audit sends skill text only to an explicit numeric loopback endpoint (with proxy/redirect bypass), but cannot attest that the receiving process will not forward it. Originals are never modified. Any uncertain state fails to "no suggestion" or refuses the audit, without breaking Hermes.
 
 See [SECURITY.md](../SECURITY.md) for reporting and mandatory tests.

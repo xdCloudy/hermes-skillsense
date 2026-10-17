@@ -122,7 +122,9 @@ hermes skillrouter clean --audit --model aux \
   --endpoint http://127.0.0.1:8011/v1/chat/completions \
   --model-id YOUR_LOCAL_MODEL --max-inferences 10
 
-# Rerun clean to process the next unreviewed batch, without redoing pending proposals.\n\n# Review and explicitly approve/reject one proposal.
+# Rerun clean to process the next unreviewed batch, without redoing pending proposals.
+
+# Review and explicitly approve/reject one proposal.
 hermes skillrouter review list
 hermes skillrouter review approve android-re
 ```
