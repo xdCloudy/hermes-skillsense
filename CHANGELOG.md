@@ -4,6 +4,8 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Conservatively skip source enrichment for session-platform and required-environment-variable conditioned skills, including block-form YAML.
+
 - Added real-Hermes enable/disable integration coverage for a native plugin skill and updated outdated skill-listing compatibility claims against current upstream source.
 
 - Invalidate the published JSON index before SQLite updates that can change approved routing metadata, preventing stale disk hints when maintenance is interrupted; ensure cleanup invalidates in-process caches even on errors.

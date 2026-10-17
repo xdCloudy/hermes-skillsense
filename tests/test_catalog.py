@@ -137,7 +137,11 @@ class CatalogueTests(unittest.TestCase):
                 "metadata:\n  hermes:\n    fallback_for_toolsets: [browser]",
                 "metadata:\n  hermes:\n    fallback_for_toolsets:\n      - browser",
                 "metadata:\n  hermes:\n    fallback_for_tools: [browser_navigate]",
-                "metadata:\n  hermes:\n    fallback_for_tools:\n      - browser_navigate"
+                "metadata:\n  hermes:\n    fallback_for_tools:\n      - browser_navigate",
+                "metadata:\n  hermes:\n    session_platforms: [telegram]",
+                "metadata:\n  hermes:\n    session_platforms:\n      - telegram",
+                "required_environment_variables: [MY_API_KEY]",
+                "required_environment_variables:\n  - name: MY_API_KEY"
             )):
                 item=root/f"restricted-{idx}"
                 item.mkdir()

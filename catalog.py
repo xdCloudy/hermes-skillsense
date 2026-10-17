@@ -52,6 +52,7 @@ def frontmatter(text: str) -> tuple[dict[str, object], str]:
             if key in {"platforms", "requires", "environments",
                        "requires_apps", "requires_toolsets", "requires_tools",
                        "fallback_for_toolsets", "fallback_for_tools",
+                       "session_platforms", "required_environment_variables",
                        "requires_env"}:
                 data["conditional"] = True
             if indent == 0:
