@@ -37,7 +37,7 @@ All notable project changes will be documented here. Release entries will follow
 
 ### Merged hardening since v0.2.2 candidate
 
-- Clarified that Hermes' native plugin-bundled skills may be explicitly loadable yet absent from canonical `skills_list()`, and therefore absent from SkillSense's snapshot (documentation correction).
+- Initially documented a limitation in native-plugin skill discovery; **superseded by the host integration proof in #49**, which confirmed enabled registered plugin skills appear in the canonical listing on the tested Hermes version.
 
 - Hardened text-only hot-path routing against multimodal input coercion, oversized-turn normalization and duplicate-name secondary hints (#39).
 
@@ -77,8 +77,8 @@ All notable project changes will be documented here. Release entries will follow
 - CLI rebuild, dry-run audit, model audit, review, enable/disable and status commands; gateway slash operations are status-only.
 - Additional security, storage, routing and catalogue tests; synthetic benchmark harness.
 
-### Outstanding production gates
-- Native Hermes end-to-end smoke test; real skill availability parity; labelled relevance benchmarks.
+### Historical outstanding gates at v0.2.0
+- Hermes end-to-end smoke testing (subsequently implemented), real session-level skill availability parity and independently labelled relevance benchmarks (both still open).
 
 
 
@@ -93,8 +93,8 @@ All notable project changes will be documented here. Release entries will follow
 - Proposed metadata schema, integration plan and benchmarking protocol.
 - GitHub issue/PR templates and documentation checks.
 
-### Not yet available
+### Historical implementation gaps at initial bootstrap (now addressed)
 - Live skill routing, skill eligibility discovery, sidecar metadata audit/review, local auxiliary inference.
-- Verified end-to-end Hermes installation and plugin doctor results (must be validated on an installed host).
+- Verified end-to-end Hermes installation and plugin doctor results (subsequently validated through CI).
 
 No tagged releases or measured runtime results exist yet.
