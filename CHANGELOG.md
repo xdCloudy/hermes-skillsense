@@ -4,6 +4,8 @@ All notable project changes will be documented here. Release entries will follow
 
 ## [Unreleased]
 
+- Secure existing sidecar directories to 0700 on POSIX, shielding SQLite WAL/SHM files on older profiles; reject final directory symlinks where supported.
+
 - Restricted SQLite sidecar creation to owner-only permissions on POSIX, repairing old overly permissive database files and refusing final-path symlinks where O_NOFOLLOW is supported.
 - Conservatively skip source enrichment for session-platform and required-environment-variable conditioned skills, including block-form YAML.
 

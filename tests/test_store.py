@@ -260,3 +260,42 @@ class StoreTests(unittest.TestCase):
             with self.assertRaises(OSError):
                 open_db(root)
             self.assertEqual(protected.read_bytes(), b"do not overwrite")
+
+    @unittest.skipUnless(os.name == "posix", "POSIX directory modes only")
+    def test_existing_permissive_sidecar_directory_is_secured(self):
+        from skillsense_test.store import open_db
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "existing-sidecar"
+            root.mkdir(mode=0o755)
+            os.chmod(root, 0o755)
+            old_umask = os.umask(0)
+            try:
+                conn = open_db(root)
+                try:
+                    conn.execute("INSERT INTO skills "
+                                 "(id,name,description,tags,intents,source_hash,path,scanned_at) "
+                                 "VALUES (?,?,?,?,?,?,?,?)",
+                                 ("example", "example", "description", "[]", "[]",
+                                  "sha", "/private/path", 1))
+                    conn.commit()
+                    self.assertEqual(stat.S_IMODE(root.stat().st_mode), 0o700)
+                    self.assertEqual(stat.S_IMODE((root / "data.db").stat().st_mode), 0o600)
+                finally:
+                    conn.close()
+            finally:
+                os.umask(old_umask)
+
+    @unittest.skipUnless(os.name == "posix" and hasattr(os, "O_NOFOLLOW"),
+                         "POSIX final-directory symlink check only")
+    def test_sidecar_directory_symlink_is_rejected(self):
+        from skillsense_test.store import open_db
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            protected = base / "protected"
+            protected.mkdir()
+            os.chmod(protected, 0o755)
+            linked = base / "sidecar"
+            linked.symlink_to(protected, target_is_directory=True)
+            with self.assertRaises(OSError):
+                open_db(linked)
+            self.assertEqual(stat.S_IMODE(protected.stat().st_mode), 0o755)

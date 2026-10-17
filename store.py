@@ -25,11 +25,32 @@ def data_dir() -> Path:
         home = Path(os.environ.get("HERMES_HOME", str(Path.home() / ".hermes")))
         return home / "plugin-data" / "skillsense"
 
+def _secure_sidecar_directory(root: Path) -> None:
+    """Prevent readable SQLite WAL/SHM journals in legacy sidecar directories.
+
+    Open the final directory without following a symlink before tightening its
+    permissions. All ancestor directories are controlled by Hermes/the user.
+    """
+    if os.name != "posix":
+        return
+    if not hasattr(os, "O_NOFOLLOW") and root.is_symlink():
+        raise OSError("SkillSense storage directory must not be a symlink")
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(root, flags)
+    try:
+        if os.fstat(fd).st_uid != os.getuid():
+            raise PermissionError("SkillSense storage directory is not owned by this user")
+        os.fchmod(fd, 0o700)
+    finally:
+        os.close(fd)
+
+
 def open_db(home: Path | None = None) -> sqlite3.Connection:
     root = Path(home) if home else data_dir()
-    # The sidecar can contain private source paths and generated metadata.
-    # Do not let a permissive umask create a world-readable database.
+    # Reopening an older profile must also secure the directory, not just the
+    # data.db file: WAL and shared-memory files live alongside the database.
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    _secure_sidecar_directory(root)
     db_path = root / "data.db"
     flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(db_path, flags, 0o600)
