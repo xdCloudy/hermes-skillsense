@@ -1,5 +1,7 @@
 import json
 import hashlib
+import os
+import stat
 import sys
 import tempfile
 import unittest
@@ -224,3 +226,37 @@ class StoreTests(unittest.TestCase):
                 self.assertTrue(read_index_status(home)[1])
             finally:
                 conn.close()
+
+    @unittest.skipUnless(os.name == "posix", "POSIX ownership modes only")
+    def test_sqlite_sidecar_created_private_even_with_permissive_umask(self):
+        from skillsense_test.store import open_db
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "skillsense"
+            old_umask = os.umask(0)
+            try:
+                conn = open_db(root)
+                conn.close()
+            finally:
+                os.umask(old_umask)
+            self.assertEqual(stat.S_IMODE(root.stat().st_mode), 0o700)
+            self.assertEqual(stat.S_IMODE((root / "data.db").stat().st_mode), 0o600)
+
+            # An older version may have created a broadly readable DB.
+            os.chmod(root / "data.db", 0o666)
+            conn = open_db(root)
+            conn.close()
+            self.assertEqual(stat.S_IMODE((root / "data.db").stat().st_mode), 0o600)
+
+    @unittest.skipUnless(os.name == "posix" and hasattr(os, "O_NOFOLLOW"),
+                         "O_NOFOLLOW is unavailable")
+    def test_database_path_symlink_is_rejected(self):
+        from skillsense_test.store import open_db
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "skillsense"
+            root.mkdir()
+            protected = Path(temp) / "external.db"
+            protected.write_bytes(b"do not overwrite")
+            (root / "data.db").symlink_to(protected)
+            with self.assertRaises(OSError):
+                open_db(root)
+            self.assertEqual(protected.read_bytes(), b"do not overwrite")

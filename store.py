@@ -27,8 +27,19 @@ def data_dir() -> Path:
 
 def open_db(home: Path | None = None) -> sqlite3.Connection:
     root = Path(home) if home else data_dir()
-    root.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(root / "data.db", timeout=10)
+    # The sidecar can contain private source paths and generated metadata.
+    # Do not let a permissive umask create a world-readable database.
+    root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    db_path = root / "data.db"
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(db_path, flags, 0o600)
+    try:
+        if os.name == "posix":
+            # Also repair permissions on a database created by older versions.
+            os.fchmod(fd, 0o600)
+    finally:
+        os.close(fd)
+    db = sqlite3.connect(db_path, timeout=10)
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA busy_timeout=10000")
     db.execute("PRAGMA journal_mode=WAL")
